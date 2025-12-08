@@ -7,51 +7,77 @@ import axios from 'axios'
 
 // 创建axios实例
 const service = axios.create({
-  baseURL: import.meta.env.VITE_APP_BASE_API,  // 从环境变量读取
+  baseURL: import.meta.env.VITE_APP_BASE_API || '/api', // 从环境变量读取
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 })
 
 // 请求拦截器
 service.interceptors.request.use(
-  config => {
+  (config) => {
     // 请求发送前的处理
-    const token = localStorage.getItem('token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
+    console.log('🔵 发送请求:', config.method?.toUpperCase(), config.url)
+
+    // 先注释掉token逻辑
+    // const token = localStorage.getItem('token')
+    // if (token) {
+    //   config.headers.Authorization = `Bearer ${token}`
+    // }
+
     return config
   },
-  error => {
+  (error) => {
     return Promise.reject(error)
-  }
+  },
 )
 
 // 响应拦截器
 service.interceptors.response.use(
-  response => {
-    // 响应数据处理
+  (response) => {
+    // 对响应数据做点什么
+    console.log('✅ 请求成功:', response.config.url)
     return response.data
   },
-  error => {
-    // 统一错误处理
+  (error) => {
+    // 对响应错误做点什么
     if (error.response) {
+      // 服务器有响应，但状态码不是2xx
+      console.error('❌ 响应错误:', {
+        status: error.response.status,
+        message: error.response.data?.message || error.message,
+        url: error.config?.url,
+      })
+
       switch (error.response.status) {
+        case 400:
+          return Promise.reject(new Error('请求参数错误'))
         case 401:
-          console.error('未授权，请登录')
-          // 可以跳转到登录页
-          break
+          // Token过期或无效
+          localStorage.removeItem('token')
+          localStorage.removeItem('userInfo')
+          window.location.href = '/'
+          return Promise.reject(new Error('登录已过期，请重新登录'))
+        case 403:
+          return Promise.reject(new Error('没有权限访问'))
+        case 404:
+          return Promise.reject(new Error('请求的资源不存在'))
         case 500:
-          console.error('服务器内部错误')
-          break
+          return Promise.reject(new Error('服务器内部错误'))
         default:
-          console.error('请求错误:', error.message)
+          return Promise.reject(new Error(`请求失败: ${error.response.status}`))
       }
+    } else if (error.request) {
+      // 请求已发送，但没有收到响应
+      console.error('网络错误:', error.message)
+      return Promise.reject(new Error('网络连接失败，请检查网络设置'))
+    } else {
+      // 请求设置错误
+      console.error('请求配置错误:', error.message)
+      return Promise.reject(new Error('请求配置错误: ' + error.message))
     }
-    return Promise.reject(error)
-  }
+  },
 )
 
 export default service
