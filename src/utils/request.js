@@ -7,7 +7,7 @@ import axios from 'axios'
 
 // 创建axios实例
 const service = axios.create({
-  baseURL: import.meta.env.VITE_APP_BASE_API || '/api', // 从环境变量读取
+  baseURL: '', // 从环境变量读取
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

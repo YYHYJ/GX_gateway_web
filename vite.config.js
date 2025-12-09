@@ -25,7 +25,7 @@ export default defineConfig({
         target: 'http://172.27.135.60:8080', // 你的WSL后端地址
         changeOrigin: true, // 修改请求头中的Origin
         secure: false, // 如果是https，需要设置为false
-        rewrite: (path) => path.replace(/^\/api/, ''), // 路径重写
+        //rewrite: (path) => path.replace(/^\/api/, '/api'), // 路径重写
       },
     },
   },

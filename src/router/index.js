@@ -17,6 +17,12 @@ const routes = [
     component: () => import('@/views/Dashboard.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/data/device/modelConfig',
+    name: 'DeviceTemplate',
+    component: () => import('@/views/data/DeviceModelConfig.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
 
 const router = createRouter({
