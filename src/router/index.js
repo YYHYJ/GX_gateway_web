@@ -20,8 +20,34 @@ const routes = [
   {
     path: '/data/device/modelConfig',
     name: 'DeviceTemplate',
-    component: () => import('@/views/data/DeviceModelConfig.vue'),
+    component: () => import('@/views/datasense/DeviceModelConfig/DeviceModelConfig.vue'),
     meta: { requiresAuth: true },
+  },
+  // 新增：通信规约页面
+  {
+    path: '/data/device/modelConfig/:templateId/communication',
+    name: 'CommunicationSpec',
+    component: () => import('@/views/datasense/DeviceModelConfig/pages/CommunicationSpec.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '通信规约配置',
+    },
+    // 添加路由守卫，在进入前获取协议类型
+    beforeEnter: async (to, from, next) => {
+      try {
+        const protocolType = to.query.protocol
+        const templateId = to.params.templateId
+
+        if (!protocolType || !templateId) {
+          console.warn('缺少必要参数: protocolType 或 templateId')
+        }
+
+        next()
+      } catch (error) {
+        console.error('路由守卫错误:', error)
+        next()
+      }
+    },
   },
 ]
 

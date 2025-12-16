@@ -196,7 +196,7 @@ export default {
       }
     },
 
-    // 切换子菜单展开状态 - 修复版本
+    // 切换子菜单展开状态
     toggleSubmenu(item) {
       // 创建新的数组确保响应性
       this.menuItems = this.menuItems.map((menuItem) => {

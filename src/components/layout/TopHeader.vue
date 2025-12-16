@@ -3,13 +3,11 @@
     <div class="header-content">
       <div class="page-title"><i :class="titleIcon"></i> {{ title }}</div>
       <div class="user-info">
-        <i class="fas fa-bell"></i>
-        <i class="fas fa-cog"></i>
         <div class="user-profile">
           <i class="fas fa-user-circle"></i>
           <span>{{ userName }}</span>
         </div>
-        <!-- 新增退出登录按钮 -->
+        <!-- 退出登录按钮 -->
         <button class="logout-btn" @click="handleLogout" title="退出登录">
           <i class="fas fa-sign-out-alt"></i>
           <span class="logout-text">退出</span>

@@ -45,7 +45,7 @@ export default {
         logs: '日志系统',
         ota: 'OTA升级',
       }
-      return titleMap[this.activeNav] || '系统仪表盘'
+      return titleMap[this.activeNav] || '--'
     },
     pageIcon() {
       const iconMap = {
