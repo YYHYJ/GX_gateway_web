@@ -67,27 +67,14 @@ export default {
           name: '仪表盘',
           icon: 'fas fa-tachometer-alt', // 仪表盘图标
           path: '/dashboard',
-          expanded: true,
-          children: [],
         },
         {
           id: 'data-collection',
-          name: '数据采集与转发',
+          name: '数据采集',
           icon: 'fas fa-database', // 数据库图标
           path: '',
           expanded: true,
           children: [
-            {
-              id: 'protocol-overview',
-              name: '协议总览',
-              path: '/data/protocol-overview',
-              active: true,
-            },
-            {
-              id: 'communication-interface',
-              name: '通信接口',
-              path: '/data/communication-interface',
-            },
             {
               id: 'DeviceTemplate',
               name: '设备模板',
@@ -96,7 +83,7 @@ export default {
             {
               id: 'device-instance',
               name: '设备实例',
-              path: '/data/device-instance',
+              path: '/data/device/instance', //点击子菜单跳转到设备实例页面
             },
             {
               id: 'collection-debug',
@@ -104,6 +91,14 @@ export default {
               path: '/data/collection-debug',
             },
           ],
+        },
+        {
+          id: 'data-forwarding',
+          name: '数据转发',
+          icon: 'fas fa-exchange-alt', // 数据库图标
+          path: '',
+          expanded: true,
+          children: [],
         },
         {
           id: 'system-management',
@@ -116,6 +111,11 @@ export default {
               id: 'system-settings',
               name: '系统设置',
               path: '/system/settings',
+            },
+            {
+              id: 'communication-interface',
+              name: '通信接口',
+              path: '/system/communication-interface',
             },
             {
               id: 'network-config',

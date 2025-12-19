@@ -17,7 +17,7 @@
               id="modelName"
               v-model="formData.model_name"
               type="text"
-              placeholder="请输入模板名称"
+              placeholder="请输入模板名称，建议全英文和英文字符"
               required
               class="form-control"
             />

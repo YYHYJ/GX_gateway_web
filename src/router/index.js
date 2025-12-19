@@ -23,6 +23,7 @@ const routes = [
     component: () => import('@/views/datasense/DeviceModelConfig/DeviceModelConfig.vue'),
     meta: { requiresAuth: true },
   },
+
   // 新增：通信规约页面
   {
     path: '/data/device/modelConfig/:templateId/communication',
@@ -48,6 +49,12 @@ const routes = [
         next()
       }
     },
+  },
+  {
+    path: '/data/device/instance',
+    name: 'DeviceInstance',
+    component: () => import('@/views/datasense/DeviceConfig/DeviceConfig.vue'),
+    meta: { requiresAuth: true },
   },
 ]
 

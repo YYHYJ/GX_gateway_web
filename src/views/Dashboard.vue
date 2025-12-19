@@ -1,11 +1,6 @@
 <template>
   <!-- 仪表盘页面 -->
-  <MainLayout
-    active-nav="dashboard"
-    system-status="normal"
-    :user-info="userInfo"
-    @nav-change="handleNavigation"
-  >
+  <MainLayout active-nav="data" user-name="管理员" @nav-change="handleNavigation">
     <div class="dashboard-vertical">
       <!-- 系统信息概览卡片 -->
       <div class="card">

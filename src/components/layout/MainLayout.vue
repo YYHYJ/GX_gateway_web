@@ -40,7 +40,8 @@ export default {
     pageTitle() {
       const titleMap = {
         dashboard: '系统仪表盘',
-        data: '数据采集与转发',
+        data: '数据采集',
+        forward: '数据转发',
         system: '系统管理',
         logs: '日志系统',
         ota: 'OTA升级',

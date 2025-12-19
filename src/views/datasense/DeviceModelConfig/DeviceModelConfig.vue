@@ -6,7 +6,7 @@
     <!-- 主内容区 -->
     <div class="main-content">
       <!-- 顶部导航 -->
-      <TopHeader title="数据采集与转发" title-icon="fas fa-database" user-name="管理员" />
+      <TopHeader title="数据采集" title-icon="fas fa-database" user-name="管理员" />
 
       <!-- 内容区域 -->
       <div class="content-area">
@@ -576,6 +576,7 @@ export default {
 .filter-bar {
   display: flex;
   gap: 15px;
+  max-width: 400px;
 }
 
 /* 模板卡片特有样式 */

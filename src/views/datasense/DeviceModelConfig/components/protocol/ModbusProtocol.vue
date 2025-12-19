@@ -39,15 +39,10 @@
 
         <select v-model="filters.dataType" class="filter-select" @change="loadPoints">
           <option value="">所有数据类型</option>
-          <option value="bool">BOOL</option>
-          <option value="bit0">BIT0</option>
-          <option value="bit1">BIT1</option>
-          <option value="int16">INT16</option>
-          <option value="uint16">UINT16</option>
-          <option value="int32">INT32</option>
-          <option value="uint32">UINT32</option>
-          <option value="float">FLOAT</option>
-          <option value="double">DOUBLE</option>
+          <!-- 统一的数据类型选项 -->
+          <option v-for="type in dataTypeOptions" :key="type.value" :value="type.value">
+            {{ type.label }}
+          </option>
         </select>
 
         <!-- 新增：可控字段筛选 -->
@@ -78,7 +73,7 @@
           <button class="btn btn-primary" @click="showAddPointDialog">
             <i class="fas fa-plus"></i> 新增点位
           </button>
-          <button class="btn btn-success" @click="addPointGroup">
+          <button class="btn btn-success" @click="showAddPointGroupDialog">
             <i class="fas fa-layer-group"></i> 新增点位组
           </button>
         </div>
@@ -119,7 +114,6 @@
                 <th style="width: 40px">
                   <input type="checkbox" v-model="selectAll" @change="toggleSelectAll" />
                 </th>
-
                 <th>点位代码</th>
                 <th>点位名称</th>
                 <th>状态</th>
@@ -145,6 +139,7 @@
                 <th class="fixed-column-action">操作</th>
               </tr>
             </thead>
+
             <tbody>
               <tr v-if="points.length === 0 && hasSearchFilter">
                 <td colspan="24" class="no-match">
@@ -180,7 +175,7 @@
                   </span>
                 </td>
                 <td>{{ point.functionCode }}</td>
-                <td>{{ point.dataType }}</td>
+                <td>{{ formatDataType(point.dataType) }}</td>
                 <td>{{ point.scaleFactor }}</td>
                 <td>{{ point.offset }}</td>
                 <td>{{ point.engineeringUnit }}</td>
@@ -226,13 +221,22 @@
         <div v-if="points.length > 0" class="pagination-controls">
           <div class="page-info">
             <span>第</span>
-            <input type="text" v-model="currentPage" class="page-input" @change="changePage" />
+            <input
+              type="number"
+              v-model.number="currentPage"
+              class="page-input"
+              @change="changePage"
+              @keyup.enter="changePage"
+              :min="1"
+              :max="totalPages"
+              style="width: 50px; text-align: center"
+            />
             <span>页，每页</span>
-            <select v-model="pageSize" class="page-size-select" @change="changePageSize">
-              <option value="10">10</option>
-              <option value="20">20</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
+            <select v-model.number="pageSize" class="page-size-select" @change="changePageSize">
+              <option :value="10">10</option>
+              <option :value="20">20</option>
+              <option :value="50">50</option>
+              <option :value="100">100</option>
             </select>
             <span>条，共 {{ totalItems }} 条</span>
           </div>
@@ -331,15 +335,9 @@
             <div class="form-group">
               <label><span class="required">*</span>数据类型</label>
               <select v-model="pointForm.dataType">
-                <option value="bool">BOOL</option>
-                <option value="bit0">BIT0</option>
-                <option value="bit1">BIT1</option>
-                <option value="int16">INT16</option>
-                <option value="uint16">UINT16</option>
-                <option value="int32">INT32</option>
-                <option value="uint32">UINT32</option>
-                <option value="float">FLOAT</option>
-                <option value="double">DOUBLE</option>
+                <option v-for="type in dataTypeOptions" :key="type.value" :value="type.value">
+                  {{ type.label }}
+                </option>
               </select>
             </div>
             <div class="form-group">
@@ -434,6 +432,310 @@
         </div>
       </div>
     </div>
+
+    <!-- 新增点位组对话框 -->
+    <div v-if="showGroupDialog" class="dialog-overlay" @click.self="handleOverlayClick">
+      <div class="dialog-content dialog-large">
+        <div class="dialog-header">
+          <h3>新增点位组</h3>
+          <button class="dialog-close" @click="closeGroupDialog">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="dialog-body">
+          <form @submit.prevent="generatePreview">
+            <!-- 点位组配置 -->
+            <div class="form-section">
+              <h4 class="form-section-title">点位组配置</h4>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="required">组员数量</label>
+                  <input
+                    type="number"
+                    v-model.number="pointGroupForm.memberCount"
+                    class="form-control"
+                    min="1"
+                    max="100"
+                    required
+                    placeholder="例如: 5"
+                    @change="updateAddressInterval"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="required">基础点位代码</label>
+                  <input
+                    type="text"
+                    v-model="pointGroupForm.basePointCode"
+                    class="form-control"
+                    required
+                    placeholder="例如: TEMP"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="required">基础点位名称</label>
+                  <input
+                    type="text"
+                    v-model="pointGroupForm.basePointName"
+                    class="form-control"
+                    required
+                    placeholder="例如: 温度"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="required">起始地址</label>
+                  <input
+                    type="number"
+                    v-model.number="pointGroupForm.startAddress"
+                    class="form-control"
+                    min="1"
+                    max="65535"
+                    required
+                    placeholder="例如: 10000"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="required">状态</label>
+                  <select v-model="pointGroupForm.status" class="form-control" required>
+                    <option :value="1">启用</option>
+                    <option :value="0">停用</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="required">可控</label>
+                  <select v-model="pointGroupForm.isControl" class="form-control" required>
+                    <option :value="1">可控</option>
+                    <option :value="0">不可控</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Modbus配置 -->
+            <div class="form-section">
+              <h4 class="form-section-title">Modbus配置</h4>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="required">功能码</label>
+                  <select
+                    v-model="pointGroupForm.functionCode"
+                    class="form-control"
+                    required
+                    @change="onFunctionCodeChange"
+                  >
+                    <option value="1">01 - 读线圈</option>
+                    <option value="2">02 - 读离散输入</option>
+                    <option value="3">03 - 读保持寄存器</option>
+                    <option value="4" selected>04 - 读输入寄存器</option>
+                    <option value="5">05 - 写单个线圈</option>
+                    <option value="6">06 - 写单个寄存器</option>
+                    <option value="15">15 - 写多个线圈</option>
+                    <option value="16">16 - 写多个寄存器</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="required">数据类型</label>
+                  <select
+                    v-model="pointGroupForm.dataType"
+                    class="form-control"
+                    required
+                    @change="onDataTypeChange"
+                  >
+                    <option v-for="type in dataTypeOptions" :key="type.value" :value="type.value">
+                      {{ type.label }}
+                    </option>
+                  </select>
+                  <small class="hint-text" v-if="pointGroupForm.dataType.startsWith('bit')">
+                    {{ getBitTypeHint() }}
+                  </small>
+                </div>
+                <div class="form-group">
+                  <label>地址间隔</label>
+                  <input
+                    type="number"
+                    v-model.number="pointGroupForm.addressInterval"
+                    class="form-control"
+                    min="0"
+                    max="10"
+                    placeholder="自动计算"
+                    :disabled="pointGroupForm.dataType.startsWith('bit')"
+                  />
+                  <small v-if="pointGroupForm.dataType.startsWith('bit')" class="hint-text">
+                    BIT类型地址间隔为0
+                  </small>
+                </div>
+                <div class="form-group">
+                  <label>缩放因子</label>
+                  <input
+                    type="number"
+                    v-model.number="pointGroupForm.scaleFactor"
+                    class="form-control"
+                    step="0.001"
+                    placeholder="1.0"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>偏移量</label>
+                  <input
+                    type="number"
+                    v-model.number="pointGroupForm.offset"
+                    class="form-control"
+                    step="0.001"
+                    placeholder="0.0"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>字节序</label>
+                  <select v-model="pointGroupForm.byteOrder" class="form-control">
+                    <option value="big_endian">大端模式</option>
+                    <option value="little_endian">小端模式</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>工程单位</label>
+                  <input
+                    type="text"
+                    v-model="pointGroupForm.engineeringUnit"
+                    class="form-control"
+                    placeholder="例如: °C"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>精度</label>
+                  <input
+                    type="number"
+                    v-model.number="pointGroupForm.precision"
+                    class="form-control"
+                    min="0"
+                    max="6"
+                    placeholder="2"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>最小值</label>
+                  <input
+                    type="number"
+                    v-model.number="pointGroupForm.minValue"
+                    class="form-control"
+                    step="0.001"
+                    placeholder="最小值"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>最大值</label>
+                  <input
+                    type="number"
+                    v-model.number="pointGroupForm.maxValue"
+                    class="form-control"
+                    step="0.001"
+                    placeholder="最大值"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>报警点</label>
+                  <select v-model="pointGroupForm.isWarnPoint" class="form-control">
+                    <option :value="0">否</option>
+                    <option :value="1">是</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>报警下限</label>
+                  <input
+                    type="number"
+                    v-model.number="pointGroupForm.warningLow"
+                    class="form-control"
+                    step="0.001"
+                    placeholder="报警下限"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>报警上限</label>
+                  <input
+                    type="number"
+                    v-model.number="pointGroupForm.warningHigh"
+                    class="form-control"
+                    step="0.001"
+                    placeholder="报警上限"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- 预览区域 -->
+            <div v-if="previewPoints.length > 0" class="form-section preview-section">
+              <h4 class="form-section-title">点位预览 (共 {{ previewPoints.length }} 个点位)</h4>
+              <div class="preview-container">
+                <div class="preview-table-container">
+                  <table class="preview-table">
+                    <thead>
+                      <tr>
+                        <th>序号</th>
+                        <th>点位代码</th>
+                        <th>点位名称</th>
+                        <th>地址</th>
+                        <th>数据类型</th>
+                        <th>状态</th>
+                        <th>可控</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="(point, index) in previewPoints.slice(0, maxPreviewRows)"
+                        :key="index"
+                      >
+                        <td>{{ index + 1 }}</td>
+                        <td>{{ point.point_code }}</td>
+                        <td>{{ point.point_name }}</td>
+                        <td>{{ point.address }}</td>
+                        <td>{{ formatDataType(point.data_type) }}</td>
+                        <td>{{ point.is_active === 1 ? '启用' : '停用' }}</td>
+                        <td>{{ point.is_control === 1 ? '可控' : '不可控' }}</td>
+                      </tr>
+                      <tr v-if="previewPoints.length > maxPreviewRows">
+                        <td colspan="7" class="preview-more">
+                          已显示 {{ maxPreviewRows }} 个点位，还有
+                          {{ previewPoints.length - maxPreviewRows }} 个点位未显示
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div v-if="previewPoints.length > 0" class="preview-summary">
+                  <div class="summary-item">
+                    <span class="label">起始地址:</span>
+                    <span class="value">{{ previewPoints[0].address }}</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="label">结束地址:</span>
+                    <span class="value">{{ previewPoints[previewPoints.length - 1].address }}</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="label">地址间隔:</span>
+                    <span class="value">{{ pointGroupForm.addressInterval }}</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="label">数据类型范围:</span>
+                    <span class="value">{{ getDataTypeRange() }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="dialog-footer">
+              <button type="button" class="btn btn-outline" @click="closeGroupDialog">取消</button>
+              <button type="submit" class="btn btn-primary">预览生成点位</button>
+              <button
+                type="button"
+                class="btn btn-success"
+                @click="savePointGroup"
+                :disabled="previewPoints.length === 0"
+              >
+                确认生成点位
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -479,7 +781,7 @@ export default {
       currentPage: 1,
       pageSize: 10,
 
-      // 对话框
+      // 点位对话框
       showDialog: false,
       editingPoint: null,
       pointForm: {
@@ -507,9 +809,69 @@ export default {
         sourcePointCodes: null,
         calculationExpression: null,
       },
+
+      // 点位组对话框
+      showGroupDialog: false,
+      previewPoints: [],
+      maxPreviewRows: 10,
+      preventClose: false,
+      pointGroupForm: {
+        // 点位组配置
+        memberCount: 5,
+        basePointCode: '',
+        basePointName: '',
+        startAddress: 0,
+        status: 1,
+        isControl: 0,
+
+        // Modbus配置
+        functionCode: '4',
+        dataType: 'uint16',
+        addressInterval: 1, // 默认根据数据类型自动计算
+        scaleFactor: 1.0,
+        offset: 0.0,
+        byteOrder: 'big_endian',
+        engineeringUnit: '',
+        precision: 2,
+        minValue: null,
+        maxValue: null,
+        isWarnPoint: 0,
+        warningLow: null,
+        warningHigh: null,
+      },
     }
   },
   computed: {
+    // 统一的数据类型选项
+    dataTypeOptions() {
+      return [
+        { value: 'boolean', label: 'BOOL' },
+        { value: 'bit', label: 'BIT (自动生成BIT0-BIT15)' },
+        { value: 'bit0', label: 'BIT0' },
+        { value: 'bit1', label: 'BIT1' },
+        { value: 'bit2', label: 'BIT2' },
+        { value: 'bit3', label: 'BIT3' },
+        { value: 'bit4', label: 'BIT4' },
+        { value: 'bit5', label: 'BIT5' },
+        { value: 'bit6', label: 'BIT6' },
+        { value: 'bit7', label: 'BIT7' },
+        { value: 'bit8', label: 'BIT8' },
+        { value: 'bit9', label: 'BIT9' },
+        { value: 'bit10', label: 'BIT10' },
+        { value: 'bit11', label: 'BIT11' },
+        { value: 'bit12', label: 'BIT12' },
+        { value: 'bit13', label: 'BIT13' },
+        { value: 'bit14', label: 'BIT14' },
+        { value: 'bit15', label: 'BIT15' },
+        { value: 'int16', label: 'INT16' },
+        { value: 'uint16', label: 'UINT16' },
+        { value: 'int32', label: 'INT32' },
+        { value: 'uint32', label: 'UINT32' },
+        { value: 'float', label: 'FLOAT' },
+        { value: 'double', label: 'DOUBLE' },
+      ]
+    },
+
     hasSearchFilter() {
       return (
         this.searchText.trim() !== '' ||
@@ -544,7 +906,140 @@ export default {
       }
       return pages
     },
+
+    // 数据类型与地址间隔的映射关系
+    dataTypeIntervalMap() {
+      return {
+        // BOOL类型：地址间隔为1（假设BOOL占用1个寄存器）
+        boolean: 1,
+
+        // BIT类型：地址间隔为0（同一个寄存器内）
+        bit: 0,
+        bit0: 0,
+        bit1: 0,
+        bit2: 0,
+        bit3: 0,
+        bit4: 0,
+        bit5: 0,
+        bit6: 0,
+        bit7: 0,
+        bit8: 0,
+        bit9: 0,
+        bit10: 0,
+        bit11: 0,
+        bit12: 0,
+        bit13: 0,
+        bit14: 0,
+        bit15: 0,
+
+        // 16位整数：地址间隔为1
+        int16: 1,
+        uint16: 1,
+
+        // 32位整数：地址间隔为2
+        int32: 2,
+        uint32: 2,
+
+        // 浮点数：地址间隔为2
+        float: 2,
+
+        // 双精度浮点数：地址间隔为4
+        double: 4,
+      }
+    },
+
+    // 功能码与数据类型约束
+    functionCodeDataTypeConstraint() {
+      return {
+        1: [
+          'boolean',
+          'bit',
+          'bit0',
+          'bit1',
+          'bit2',
+          'bit3',
+          'bit4',
+          'bit5',
+          'bit6',
+          'bit7',
+          'bit8',
+          'bit9',
+          'bit10',
+          'bit11',
+          'bit12',
+          'bit13',
+          'bit14',
+          'bit15',
+        ],
+        2: [
+          'boolean',
+          'bit',
+          'bit0',
+          'bit1',
+          'bit2',
+          'bit3',
+          'bit4',
+          'bit5',
+          'bit6',
+          'bit7',
+          'bit8',
+          'bit9',
+          'bit10',
+          'bit11',
+          'bit12',
+          'bit13',
+          'bit14',
+          'bit15',
+        ],
+        5: [
+          'boolean',
+          'bit',
+          'bit0',
+          'bit1',
+          'bit2',
+          'bit3',
+          'bit4',
+          'bit5',
+          'bit6',
+          'bit7',
+          'bit8',
+          'bit9',
+          'bit10',
+          'bit11',
+          'bit12',
+          'bit13',
+          'bit14',
+          'bit15',
+        ],
+        15: [
+          'boolean',
+          'bit',
+          'bit0',
+          'bit1',
+          'bit2',
+          'bit3',
+          'bit4',
+          'bit5',
+          'bit6',
+          'bit7',
+          'bit8',
+          'bit9',
+          'bit10',
+          'bit11',
+          'bit12',
+          'bit13',
+          'bit14',
+          'bit15',
+        ],
+
+        3: ['int16', 'uint16', 'int32', 'uint32', 'float', 'double'],
+        4: ['int16', 'uint16', 'int32', 'uint32', 'float', 'double'],
+        6: ['int16', 'uint16', 'int32', 'uint32', 'float', 'double'],
+        16: ['int16', 'uint16', 'int32', 'uint32', 'float', 'double'],
+      }
+    },
   },
+
   created() {
     this.pointForm.modelId = Number(this.templateId)
     this.loadPoints()
@@ -561,6 +1056,21 @@ export default {
     },
   },
   methods: {
+    // 格式化数据类型显示
+    formatDataType(dataType) {
+      if (!dataType) return '--'
+
+      // 查找对应的显示标签
+      const option = this.dataTypeOptions.find((opt) => opt.value === dataType)
+      if (option) {
+        // 只返回简短的标签，去掉括号里的说明
+        return option.label.split('(')[0].trim()
+      }
+
+      // 如果没有找到，返回原始值
+      return dataType.toUpperCase()
+    },
+
     async loadPoints() {
       this.loading = true
       this.error = ''
@@ -661,14 +1171,31 @@ export default {
     updatePagination() {
       this.currentPage = 1
       this.totalItems = this.filteredPoints.length
-      this.totalPages = Math.ceil(this.totalItems / this.pageSize)
+      this.totalPages = Math.max(1, Math.ceil(this.totalItems / this.pageSize))
       this.updateCurrentPageData()
     },
 
     updateCurrentPageData() {
+      if (this.filteredPoints.length === 0) {
+        this.points = []
+        return
+      }
+
       const startIndex = (this.currentPage - 1) * this.pageSize
-      const endIndex = startIndex + this.pageSize
+      const endIndex = Math.min(startIndex + this.pageSize, this.filteredPoints.length)
       this.points = this.filteredPoints.slice(startIndex, endIndex)
+
+      // 确保当前页码不超过总页数
+      if (this.currentPage > this.totalPages && this.totalPages > 0) {
+        this.currentPage = this.totalPages
+        this.updateCurrentPageData()
+      }
+    },
+
+    changePage() {
+      // 确保页码在有效范围内
+      this.currentPage = Math.max(1, Math.min(this.currentPage, this.totalPages))
+      this.updateCurrentPageData()
     },
 
     transformPoints(records) {
@@ -761,15 +1288,15 @@ export default {
       }
     },
 
-    changePage() {
-      if (this.currentPage < 1) this.currentPage = 1
-      if (this.currentPage > this.totalPages) this.currentPage = this.totalPages
-      this.updateCurrentPageData()
-    },
-
     changePageSize() {
-      this.currentPage = 1
-      this.totalPages = Math.ceil(this.totalItems / this.pageSize)
+      // 计算新的总页数
+      this.totalPages = Math.max(1, Math.ceil(this.totalItems / this.pageSize))
+
+      // 如果当前页码大于新的总页数，重置到最后一页
+      if (this.currentPage > this.totalPages && this.totalPages > 0) {
+        this.currentPage = this.totalPages
+      }
+
       this.updateCurrentPageData()
     },
 
@@ -788,8 +1315,10 @@ export default {
     },
 
     goToPage(page) {
-      this.currentPage = page
-      this.updateCurrentPageData()
+      if (page >= 1 && page <= this.totalPages) {
+        this.currentPage = page
+        this.updateCurrentPageData()
+      }
     },
 
     showAddPointDialog() {
@@ -939,12 +1468,384 @@ export default {
           this.closeDialog()
           await this.loadPoints()
         } else {
-          throw new Error(response.data?.message || '保存失败')
+          // 统一处理400错误
+          const errorMessage = this.extractApiErrorMessage(response.data, this.editingPoint)
+          this.$message.error(errorMessage)
         }
       } catch (err) {
         console.error('保存点位失败:', err)
-        this.$message.error('保存失败: ' + (err.message || '未知错误'))
+
+        // 统一处理异常
+        const errorMessage = this.extractHttpErrorMessage(err, this.editingPoint)
+        this.$message.error(errorMessage)
       }
+    },
+
+    // 从API响应中提取错误信息
+    extractApiErrorMessage(errorData, isEdit = false) {
+      const action = isEdit ? '更新' : '创建'
+
+      if (errorData && errorData.code === 400) {
+        const errorMsg = errorData.data?.error || errorData.message || `${action}失败`
+        return `${action}失败: ${errorMsg}`
+      }
+
+      return `${action}失败: ${errorData?.message || '未知错误'}`
+    },
+
+    // 从HTTP异常中提取错误信息
+    extractHttpErrorMessage(err, isEdit = false) {
+      const action = isEdit ? '更新' : '创建'
+
+      if (err.response) {
+        const status = err.response.status
+        const errorData = err.response.data
+
+        if (status === 400) {
+          const errorMsg = errorData?.data?.error || errorData?.message || `${action}失败`
+          return `${action}失败: ${errorMsg}`
+        }
+
+        if (status === 500) {
+          return `${action}失败: 服务器内部错误，请稍后重试`
+        }
+
+        const statusMessages = {
+          401: '未授权，请重新登录',
+          403: '权限不足',
+          404: '资源不存在',
+          409: '资源冲突',
+        }
+
+        const statusMessage = statusMessages[status] || `HTTP错误 (${status})`
+        return `${action}失败: ${errorData?.message || statusMessage}`
+      }
+
+      if (err.request) {
+        return `${action}失败: 网络错误，请检查网络连接`
+      }
+
+      return `${action}失败: ${err.message || '未知错误'}`
+    },
+
+    // 新增点位组相关方法
+    showAddPointGroupDialog() {
+      this.showGroupDialog = true
+      this.previewPoints = []
+      this.preventClose = false
+      this.resetPointGroupForm()
+    },
+
+    closeGroupDialog() {
+      this.showGroupDialog = false
+      this.previewPoints = []
+      this.preventClose = false
+      this.resetPointGroupForm()
+    },
+
+    // 处理点击模态框外部
+    handleOverlayClick(e) {
+      if (e.target === e.currentTarget && !this.preventClose) {
+        this.closeGroupDialog()
+      }
+    },
+
+    resetPointGroupForm() {
+      this.pointGroupForm = {
+        memberCount: 16,
+        basePointCode: '',
+        basePointName: '',
+        startAddress: 0,
+        status: 1,
+        isControl: 0,
+        functionCode: '4',
+        dataType: 'uint16',
+        addressInterval: 1,
+        scaleFactor: 1.0,
+        offset: 0.0,
+        byteOrder: 'big_endian',
+        engineeringUnit: '',
+        precision: 2,
+        minValue: null,
+        maxValue: null,
+        isWarnPoint: 0,
+        warningLow: null,
+        warningHigh: null,
+      }
+    },
+
+    // 获取BIT类型提示
+    getBitTypeHint() {
+      const dataType = this.pointGroupForm.dataType
+      if (dataType === 'bit') {
+        return '将生成BIT0, BIT1, BIT2... (从BIT0开始)'
+      } else if (dataType.startsWith('bit')) {
+        const match = dataType.match(/bit(\d+)/)
+        if (match) {
+          const startBit = parseInt(match[1])
+          const memberCount = this.pointGroupForm.memberCount
+          const endBit = startBit + memberCount - 1
+
+          if (endBit <= 15) {
+            return `将生成${dataType}, bit${startBit + 1}, bit${startBit + 2}... 到bit${endBit}`
+          } else {
+            return `最多只能生成到bit15，当前配置将超出范围`
+          }
+        }
+      }
+      return ''
+    },
+
+    // 功能码变化时的处理
+    onFunctionCodeChange() {
+      const functionCode = this.pointGroupForm.functionCode
+      const allowedDataTypes = this.functionCodeDataTypeConstraint[functionCode]
+
+      if (allowedDataTypes && !allowedDataTypes.includes(this.pointGroupForm.dataType)) {
+        this.pointGroupForm.dataType = allowedDataTypes[0]
+      }
+
+      this.updateAddressInterval()
+    },
+
+    // 数据类型变化时的处理
+    onDataTypeChange() {
+      this.updateAddressInterval()
+
+      if (this.pointGroupForm.dataType.startsWith('bit')) {
+        this.pointGroupForm.addressInterval = 0
+      }
+    },
+
+    // 更新地址间隔
+    updateAddressInterval() {
+      const dataType = this.pointGroupForm.dataType
+      const interval = this.dataTypeIntervalMap[dataType]
+
+      if (interval !== undefined) {
+        this.pointGroupForm.addressInterval = interval
+      }
+    },
+
+    // 生成点位预览
+    generatePreview() {
+      // 验证表单
+      const errors = this.validatePointGroupForm()
+      if (errors.length > 0) {
+        this.$message.error(errors.join('，'))
+        return
+      }
+
+      // 检查功能码和数据类型的约束
+      const functionCode = this.pointGroupForm.functionCode
+      const dataType = this.pointGroupForm.dataType
+      const allowedDataTypes = this.functionCodeDataTypeConstraint[functionCode]
+
+      if (allowedDataTypes && !allowedDataTypes.includes(dataType)) {
+        const functionCodeName = this.getFunctionCodeName(functionCode)
+        this.$message.error(`功能码${functionCodeName}不支持数据类型${dataType}`)
+        return
+      }
+
+      // 生成点位预览
+      this.previewPoints = this.generatePoints()
+
+      if (this.previewPoints.length > 0) {
+        this.$message.success(`已生成 ${this.previewPoints.length} 个点位预览`)
+      }
+    },
+
+    // 验证点位组表单
+    validatePointGroupForm() {
+      const errors = []
+
+      if (!this.pointGroupForm.basePointCode?.trim()) {
+        errors.push('基础点位代码不能为空')
+      }
+
+      if (!this.pointGroupForm.basePointName?.trim()) {
+        errors.push('基础点位名称不能为空')
+      }
+
+      if (this.pointGroupForm.memberCount < 1 || this.pointGroupForm.memberCount > 100) {
+        errors.push('组员数量必须在1-100之间')
+      }
+
+      if (this.pointGroupForm.startAddress < 1 || this.pointGroupForm.startAddress > 65535) {
+        errors.push('起始地址必须在1-65535之间')
+      }
+
+      // 检查BIT类型的数据类型范围
+      if (this.pointGroupForm.dataType.startsWith('bit')) {
+        const match = this.pointGroupForm.dataType.match(/bit(\d+)/)
+        if (match) {
+          const startBit = parseInt(match[1])
+          const memberCount = this.pointGroupForm.memberCount
+          const endBit = startBit + memberCount - 1
+
+          if (endBit > 15) {
+            errors.push(
+              `BIT类型最多只能到bit15，当前配置从${this.pointGroupForm.dataType}开始，生成${memberCount}个点位将超出范围`,
+            )
+          }
+        } else if (this.pointGroupForm.dataType === 'bit') {
+          // 对于普通的bit类型，从bit0开始
+          const memberCount = this.pointGroupForm.memberCount
+          const endBit = memberCount - 1
+
+          if (endBit > 15) {
+            errors.push(
+              `BIT类型最多只能生成16个点位 (BIT0-BIT15)，当前尝试生成 ${memberCount} 个点位`,
+            )
+          }
+        }
+      }
+
+      return errors
+    },
+
+    // 生成点位数据（修正BIT类型的生成逻辑）
+    generatePoints() {
+      const points = []
+      const baseCode = this.pointGroupForm.basePointCode.trim()
+      const baseName = this.pointGroupForm.basePointName.trim()
+      const dataType = this.pointGroupForm.dataType
+
+      // 处理BIT类型
+      let bitStartIndex = 0
+      if (dataType === 'bit') {
+        // 从BIT0开始
+        bitStartIndex = 0
+      } else if (dataType.startsWith('bit')) {
+        // 解析BIT后面的数字作为起始索引
+        const match = dataType.match(/bit(\d+)/)
+        if (match) {
+          bitStartIndex = parseInt(match[1])
+        }
+      }
+
+      for (let i = 0; i < this.pointGroupForm.memberCount; i++) {
+        // 生成点位代码和名称
+        const pointCode = `${baseCode}_${String(i + 1).padStart(3, '0')}`
+        const pointName = `${baseName}${i + 1}`
+
+        // 计算地址
+        const address = this.pointGroupForm.startAddress + i * this.pointGroupForm.addressInterval
+
+        // 处理数据类型
+        let generatedDataType = dataType
+        if (dataType.startsWith('bit')) {
+          // 生成递增的BIT类型：bit1, bit2, bit3... 或 bit0, bit1, bit2...
+          const bitIndex = bitStartIndex + i
+          if (bitIndex > 15) {
+            this.$message.warning(`BIT索引 ${bitIndex} 超出范围 (0-15)，点位生成将停止`)
+            break
+          }
+          generatedDataType = `bit${bitIndex}`
+        }
+
+        const point = {
+          id: null,
+          model_id: Number(this.templateId),
+          point_code: pointCode,
+          point_name: pointName,
+          is_active: this.pointGroupForm.status,
+          description: `${baseName}第${i + 1}个点位`,
+          address: address,
+          is_control: this.pointGroupForm.isControl,
+          function_code: Number(this.pointGroupForm.functionCode),
+          data_type: generatedDataType,
+          scale_factor: this.pointGroupForm.scaleFactor || 1.0,
+          offset: this.pointGroupForm.offset || 0.0,
+          engineering_unit: this.pointGroupForm.engineeringUnit || '',
+          precision: this.pointGroupForm.precision || 0,
+          byte_order: this.pointGroupForm.byteOrder,
+          min_value: this.pointGroupForm.minValue !== null ? this.pointGroupForm.minValue : 0,
+          max_value: this.pointGroupForm.maxValue !== null ? this.pointGroupForm.maxValue : 0,
+          is_warn_point: this.pointGroupForm.isWarnPoint,
+          warning_low: this.pointGroupForm.warningLow,
+          warning_high: this.pointGroupForm.warningHigh,
+          is_virtual: 0,
+          source_point_codes: '',
+          calculation_expression: '',
+          updated_time: null,
+        }
+
+        points.push(point)
+      }
+
+      return points
+    },
+
+    // 获取数据类型范围
+    getDataTypeRange() {
+      if (this.previewPoints.length === 0) return ''
+
+      const firstDataType = this.previewPoints[0].data_type
+      const lastDataType = this.previewPoints[this.previewPoints.length - 1].data_type
+
+      if (firstDataType === lastDataType) {
+        return firstDataType
+      }
+
+      return `${firstDataType} ~ ${lastDataType}`
+    },
+
+    // 获取功能码名称
+    getFunctionCodeName(code) {
+      const map = {
+        1: '01 (读线圈)',
+        2: '02 (读离散输入)',
+        3: '03 (读保持寄存器)',
+        4: '04 (读输入寄存器)',
+        5: '05 (写单个线圈)',
+        6: '06 (写单个寄存器)',
+        15: '15 (写多个线圈)',
+        16: '16 (写多个寄存器)',
+      }
+      return map[code] || code
+    },
+
+    // 保存点位组
+    async savePointGroup() {
+      try {
+        if (this.previewPoints.length === 0) {
+          this.$message.warning('请先预览生成点位')
+          return
+        }
+
+        if (!confirm(`确定要创建 ${this.previewPoints.length} 个点位吗？`)) {
+          return
+        }
+
+        // 准备请求数据
+        const requestData = {
+          points: this.previewPoints,
+        }
+
+        console.log('批量创建点位:', requestData)
+
+        // 调用API批量创建点位
+        const response = await axios.post('/api/device/model_detail_modbus', requestData)
+
+        console.log('批量创建响应:', response.data)
+
+        if (response.data && response.data.code === 200) {
+          this.$message.success(`成功创建 ${this.previewPoints.length} 个点位`)
+          this.closeGroupDialog()
+          await this.loadPoints()
+        } else {
+          throw new Error(response.data?.message || '创建点位组失败')
+        }
+      } catch (err) {
+        console.error('创建点位组失败:', err)
+        this.$message.error('创建失败: ' + (err.message || '未知错误'))
+      }
+    },
+
+    // 修改按钮点击事件
+    addPointGroup() {
+      this.showAddPointGroupDialog()
     },
 
     async batchUpdateStatus(status) {
@@ -1261,17 +2162,13 @@ export default {
           // 使用 ArrayBuffer 并转换为适当的格式
           const arrayBuffer = event.target.result
 
-          // 方法1：使用 TextDecoder 指定UTF-8编码
           try {
             const decoder = new TextDecoder('utf-8')
             const text = decoder.decode(arrayBuffer)
             resolve(text)
           } catch (error) {
-            // 方法2：如果UTF-8失败，尝试其他编码
             console.warn('UTF-8解码失败，尝试GBK编码...', error)
 
-            // 如果你的文件可能是GBK编码，可以使用第三方库如iconv-lite
-            // 这里先回退到使用 readAsText
             const fallbackReader = new FileReader()
             fallbackReader.onload = (e) => {
               resolve(e.target.result)
@@ -1287,7 +2184,6 @@ export default {
           reject(new Error('读取文件失败: ' + error))
         }
 
-        // 使用 ArrayBuffer 读取
         reader.readAsArrayBuffer(file)
       })
     },
@@ -1338,11 +2234,6 @@ export default {
         console.error('导出点表失败:', err)
         this.$message.error('导出失败: ' + (err.message || '未知错误'))
       }
-    },
-
-    // 新增点位组
-    addPointGroup() {
-      this.$message.info('新增点位组功能开发中...')
     },
   },
 }
@@ -1464,20 +2355,7 @@ export default {
   width: 100%;
   position: relative;
 }
-/* 为固定列添加阴影效果，增强视觉层次 */
-.points-table th:first-child::after,
-.points-table td:first-child::after,
-.points-table th.fixed-column-action::after,
-.points-table td.fixed-column-action::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: -2px;
-  height: 100%;
-  width: 2px;
-  background-color: #e0e0e0;
-  box-shadow: 2px 0 3px rgba(0, 0, 0, 0.1);
-}
+
 .points-table {
   width: 100%;
   border-collapse: collapse;
@@ -1505,25 +2383,6 @@ export default {
 }
 
 .point-name {
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.point-stats {
-  display: flex;
-  gap: 20px;
-  margin-top: 8px;
-  font-size: 13px;
-  color: #95a5a6;
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.stat-value {
   font-weight: 600;
   color: #2c3e50;
 }
@@ -1581,7 +2440,7 @@ export default {
   color: #721c24;
 }
 
-/* 可控字段样式 - 新增样式 */
+/* 可控字段样式 */
 .control-badge {
   display: inline-block;
   padding: 4px 10px;
@@ -1803,6 +2662,10 @@ export default {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
+.dialog-content.dialog-large {
+  max-width: 900px;
+}
+
 .dialog-header {
   display: flex;
   justify-content: space-between;
@@ -1890,22 +2753,107 @@ export default {
   gap: 10px;
 }
 
+/* 表单区域样式 */
+.form-section {
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.form-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.form-section-title {
+  font-size: 16px;
+  margin-bottom: 20px;
+  color: #495057;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+}
+
+.form-section-title:before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 16px;
+  background-color: #3498db;
+  margin-right: 10px;
+}
+
+/* 预览表格样式 */
+.preview-container {
+  margin-top: 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.preview-table-container {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.preview-table th {
+  background-color: #f8f9fa;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #2c3e50;
+  border-bottom: 1px solid #e0e0e0;
+  position: sticky;
+  top: 0;
+}
+
+.preview-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.preview-table tr:last-child td {
+  border-bottom: none;
+}
+
+.preview-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+.preview-more {
+  text-align: center;
+  color: #95a5a6;
+  font-style: italic;
+  padding: 12px !important;
+}
+
 /* 滚动条样式 */
-.table-container::-webkit-scrollbar {
+.table-container::-webkit-scrollbar,
+.preview-table-container::-webkit-scrollbar {
   height: 8px;
 }
 
-.table-container::-webkit-scrollbar-track {
+.table-container::-webkit-scrollbar-track,
+.preview-table-container::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 4px;
 }
 
-.table-container::-webkit-scrollbar-thumb {
+.table-container::-webkit-scrollbar-thumb,
+.preview-table-container::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 4px;
 }
 
-.table-container::-webkit-scrollbar-thumb:hover {
+.table-container::-webkit-scrollbar-thumb:hover,
+.preview-table-container::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
 
@@ -1957,7 +2905,7 @@ export default {
 .points-table th:first-child,
 .points-table td:first-child {
   position: sticky;
-  left: 0; /* 固定在左侧，不是right */
+  left: 0;
   background-color: #f8f9fa;
   z-index: 20;
   border-right: 1px solid #e0e0e0; /* 右边框 */
@@ -1982,19 +2930,6 @@ export default {
 /* 确保复选框列在鼠标悬停时也变色 */
 .points-table tr:hover td:first-child {
   background-color: #f8f9fa;
-}
-
-/* 为固定列添加阴影效果（需要修正） */
-.points-table th:first-child::after,
-.points-table td:first-child::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: -2px; /* 右边阴影 */
-  height: 100%;
-  width: 2px;
-  background-color: #e0e0e0;
-  box-shadow: 2px 0 3px rgba(0, 0, 0, 0.1);
 }
 
 /* 操作列应该是左边阴影 */
@@ -2034,6 +2969,11 @@ export default {
   .action-right {
     width: 100%;
     justify-content: center;
+  }
+
+  .dialog-content.dialog-large {
+    width: 95%;
+    max-width: 95%;
   }
 }
 </style>
