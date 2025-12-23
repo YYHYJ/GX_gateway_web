@@ -17,6 +17,7 @@ const routes = [
     component: () => import('@/views/Dashboard.vue'),
     meta: { requiresAuth: true },
   },
+
   {
     path: '/data/device/modelConfig',
     name: 'DeviceTemplate',
@@ -24,7 +25,6 @@ const routes = [
     meta: { requiresAuth: true },
   },
 
-  // 新增：通信规约页面
   {
     path: '/data/device/modelConfig/:templateId/communication',
     name: 'CommunicationSpec',
@@ -54,6 +54,24 @@ const routes = [
     path: '/data/device/instance',
     name: 'DeviceInstance',
     component: () => import('@/views/datasense/DeviceConfig/DeviceConfig.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/api/logs/system',
+    name: 'SystemLog',
+    component: () => import('@/views/log/SystemLog.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/api/logs/operation',
+    name: 'OperationLog',
+    component: () => import('@/views/log/OperationLog.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/api/logs/communication',
+    name: 'CommunicationLog',
+    component: () => import('@/views/log/CommunicationLog.vue'),
     meta: { requiresAuth: true },
   },
 ]

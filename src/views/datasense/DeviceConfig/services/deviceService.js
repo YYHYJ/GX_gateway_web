@@ -18,6 +18,16 @@ export const deviceService = {
     }
   },
 
+  // 获取单个设备详情
+  async getDeviceDetail(deviceId) {
+    try {
+      const response = await apiClient.get(`/device/config/${deviceId}`)
+      return response.data
+    } catch (error) {
+      throw this.handleApiError(error)
+    }
+  },
+
   // 处理设备数据
   processDeviceData(data) {
     const processed = { ...data }
@@ -39,6 +49,7 @@ export const deviceService = {
 
     return processed
   },
+
   // 创建设备实例
   async createDeviceInstance(deviceData) {
     try {
@@ -57,43 +68,16 @@ export const deviceService = {
     }
   },
 
-  async deleteDevice(deviceId) {
-    return this.batchDeleteDevices([deviceId])
-  },
-
-  // 批量删除设备实例
-  async batchDeleteDevices(deviceIds) {
-    try {
-      // 确保所有ID都是数字
-      const ids = deviceIds.map((id) => {
-        const numId = Number(id)
-        if (isNaN(numId)) {
-          throw new Error(`无效的设备ID: ${id}`)
-        }
-        return numId
-      })
-
-      const response = await apiClient.delete('/device/config', {
-        data: { ids },
-      })
-
-      if (response.data.code === 200) {
-        // 根据删除数量显示不同的消息
-        const successMessage = ids.length === 1 ? '设备删除成功' : `成功删除 ${ids.length} 个设备`
-        messageService.success(successMessage)
-        return response.data
-      } else {
-        throw new Error(response.data.message || '删除设备失败')
-      }
-    } catch (error) {
-      throw this.handleApiError(error)
-    }
-  },
-
   // 更新设备实例
-  async updateDeviceInstance(deviceId, deviceData) {
+  async updateDeviceInstance(deviceData) {
     try {
-      const response = await apiClient.put(`/device/config/${deviceId}`, deviceData)
+      // 确保有设备ID
+      if (!deviceData.id) {
+        throw new Error('设备ID不能为空')
+      }
+
+      const processedData = this.processDeviceData(deviceData)
+      const response = await apiClient.put('/device/config', processedData)
 
       if (response.data.code === 200) {
         messageService.success('设备更新成功')
@@ -106,7 +90,31 @@ export const deviceService = {
     }
   },
 
-  // 获取模板列表（如果模态框需要选择模板）
+  // 删除单个设备
+  async deleteDevice(deviceId) {
+    return this.batchDeleteDevices([deviceId])
+  },
+
+  // 批量删除设备
+  async batchDeleteDevices(deviceIds) {
+    try {
+      const response = await apiClient.delete('/device/config', {
+        data: { ids: deviceIds },
+      })
+
+      if (response.data.code === 200) {
+        const count = deviceIds.length
+        messageService.success(`成功删除 ${count} 个设备`)
+        return response.data
+      } else {
+        throw new Error(response.data.message || '删除设备失败')
+      }
+    } catch (error) {
+      throw this.handleApiError(error)
+    }
+  },
+
+  // 获取模板列表
   async getDeviceTemplates() {
     try {
       const response = await apiClient.get('/device/modelConfig')
@@ -124,16 +132,6 @@ export const deviceService = {
     } catch (error) {
       throw this.handleApiError(error)
     }
-  },
-
-  // 批量启用设备
-  async batchEnableDevices(deviceIds) {
-    return apiClient.post('/device/batch/enable', { deviceIds })
-  },
-
-  // 批量停用设备
-  async batchDisableDevices(deviceIds) {
-    return apiClient.post('/device/batch/disable', { deviceIds })
   },
 
   handleApiError(error) {

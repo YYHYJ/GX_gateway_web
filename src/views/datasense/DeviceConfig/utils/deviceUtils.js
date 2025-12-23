@@ -35,11 +35,9 @@ export const protocolUtils = {
 
     const protocolName = protocol.toLowerCase()
     const protocolNames = {
-      modbus: 'Modbus TCP',
-      modbustcp: 'Modbus TCP',
-      opcua: 'OPC UA',
+      modbusrtu: 'ModbusRTU',
+      modbustcp: 'ModbusTCP',
       mqtt: 'MQTT',
-      bacnet: 'BACnet',
     }
     return protocolNames[protocolName] || protocol
   },
@@ -47,12 +45,11 @@ export const protocolUtils = {
   // 将协议名称映射为筛选用的key
   mapProtocolToKey(protocolName) {
     const protocolMap = {
+      modbusrtu: 'modbus',
       modbustcp: 'modbus',
+      'modbus rtu': 'modbus',
       'modbus tcp': 'modbus',
-      opcua: 'opcua',
-      'opc ua': 'opcua',
       mqtt: 'mqtt',
-      bacnet: 'bacnet',
     }
 
     if (!protocolName) return ''
@@ -68,6 +65,7 @@ export const dataTransform = {
   formatDeviceItem(device) {
     return {
       id: device.id,
+      model_id: device.model_id,
       name: device.device_name,
       code: device.device_code,
       template: device.model_name,

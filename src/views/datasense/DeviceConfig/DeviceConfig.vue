@@ -1,5 +1,5 @@
 <template>
-  <!-- 仪表盘页面 -->
+  <!-- 页面 -->
   <MainLayout active-nav="data" user-name="管理员" @nav-change="handleNavigation">
     <div class="content-area">
       <!-- 面包屑导航 -->
@@ -44,9 +44,6 @@
             <table class="instances-table">
               <thead>
                 <tr>
-                  <th style="width: 40px">
-                    <input type="checkbox" v-model="selectAll" @change="toggleSelectAll" />
-                  </th>
                   <th>实例名称</th>
                   <th>模板名称</th>
                   <th>实例代码</th>
@@ -59,9 +56,6 @@
               </thead>
               <tbody>
                 <tr v-for="instance in displayInstances" :key="instance.id">
-                  <td>
-                    <input type="checkbox" v-model="selectedInstances" :value="instance.id" />
-                  </td>
                   <td>
                     <div class="instance-name">{{ instance.name }}</div>
                   </td>
@@ -80,11 +74,12 @@
                   <td class="fixed-column-action">
                     <div class="table-actions">
                       <a class="action-link" @click="handleMonitor(instance.id)">监控</a>
-                      <a class="action-link" @click="handleConfig(instance.id, instance.protocol)"
-                        >配置</a
-                      >
                       <a class="action-link" @click="handleEdit(instance.id)">编辑</a>
-                      <a class="action-link delete" @click="handleDelete(instance.id)">删除</a>
+                      <a
+                        class="action-link delete"
+                        @click="handleDelete(instance.id, instance.name)"
+                        >删除</a
+                      >
                     </div>
                   </td>
                 </tr>
@@ -101,23 +96,23 @@
             @page-change="handlePageChange"
           />
         </div>
-
-        <!-- 批量操作组件 -->
-        <BatchActions
-          :selected-instances="selectedInstances"
-          :loading="loading"
-          @batch-enable="handleBatchEnable"
-          @batch-disable="handleBatchDisable"
-          @batch-delete="handleBatchDelete"
-        />
       </div>
     </div>
   </MainLayout>
-  <!-- 模态框 -->
+
+  <!-- 创建设备模态框 -->
   <CreateDeviceModal
     v-model:visible="showCreateModal"
     @created="handleDeviceCreated"
     @close="handleModalClose"
+  />
+
+  <EditDeviceModal
+    v-model:visible="showEditModal"
+    :device-id="editingDeviceId"
+    :device-list="instances"
+    @updated="handleDeviceUpdated"
+    @close="handleEditModalClose"
   />
 </template>
 
@@ -125,9 +120,9 @@
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import CreateDeviceModal from '@/views/datasense/DeviceConfig/components/CreateDeviceModal.vue'
+import EditDeviceModal from '@/views/datasense/DeviceConfig/components/EditDeviceModal.vue' // 新增导入
 import DeviceFilter from '@/views/datasense/DeviceConfig/components/DeviceFilter.vue'
 import Pagination from '@/views/datasense/DeviceConfig/components/Pagination.vue'
-import BatchActions from '@/views/datasense/DeviceConfig/components/BatchActions.vue'
 import { deviceService } from '@/views/datasense/DeviceConfig/services/deviceService.js'
 import {
   deviceStatus,
@@ -142,8 +137,8 @@ export default {
     PageHeader,
     DeviceFilter,
     Pagination,
-    BatchActions,
     CreateDeviceModal,
+    EditDeviceModal, // 新增组件
   },
   data() {
     return {
@@ -157,7 +152,6 @@ export default {
           type: 'primary',
           icon: 'fas fa-plus',
           handler: () => {
-            // 改为 handler
             this.showCreateModal = true
           },
         },
@@ -165,8 +159,6 @@ export default {
       searchKeyword: '',
       statusFilter: '',
       protocolFilter: '',
-      selectAll: false,
-      selectedInstances: [],
       currentPage: 1,
       pageSize: 10,
       totalItems: 0,
@@ -175,6 +167,8 @@ export default {
       loading: false,
       errorMessage: null,
       showCreateModal: false,
+      showEditModal: false, // 新增：编辑模态框显示状态
+      editingDeviceId: null, // 新增：当前编辑的设备ID
     }
   },
   created() {
@@ -193,7 +187,6 @@ export default {
       this.startLoading()
       try {
         const data = await deviceService.getDeviceInstances()
-        // const templates = await deviceService.getDeviceTemplates()
         this.handleApiResponse(data)
       } catch (error) {
         this.errorMessage = error.message
@@ -210,40 +203,43 @@ export default {
 
     // 处理设备创建成功
     handleDeviceCreated() {
-      // 刷新设备列表
       this.fetchDeviceInstances()
       this.$message.success('设备实例创建成功')
     },
+
     // 处理模态框关闭
     handleModalClose() {
       this.showCreateModal = false
     },
 
+    // 处理设备编辑成功
+    handleDeviceUpdated() {
+      this.fetchDeviceInstances()
+    },
+
+    // 处理编辑模态框关闭
+    handleEditModalClose() {
+      this.showEditModal = false
+      this.editingDeviceId = null
+    },
+
+    // 编辑设备实例
+    handleEdit(deviceId) {
+      this.editingDeviceId = deviceId
+      this.showEditModal = true
+    },
+
     // 删除单个实例
-    async handleDelete(instanceId) {
-      if (confirm(`确定要删除实例 ${instanceId} 吗？`)) {
+    async handleDelete(instanceId, instanceName) {
+      if (confirm(`确定要删除实例 ${instanceName} 吗？`)) {
         this.startLoading()
         try {
           await deviceService.deleteDevice(instanceId)
           this.fetchDeviceInstances()
+          this.$message.success('删除成功')
         } catch (error) {
           this.errorMessage = error.message
-        } finally {
-          this.finishLoading()
-        }
-      }
-    },
-
-    // 批量删除选中的实例
-    async handleBatchDelete(deviceIds) {
-      if (confirm(`确定要删除选中的 ${deviceIds.length} 个设备吗？`)) {
-        this.startLoading()
-        try {
-          await deviceService.batchDeleteDevices(deviceIds)
-          this.fetchDeviceInstances()
-          this.selectedInstances = []
-        } catch (error) {
-          this.errorMessage = error.message
+          this.$message.error('删除失败: ' + error.message)
         } finally {
           this.finishLoading()
         }
@@ -309,46 +305,6 @@ export default {
       return Math.ceil(this.totalItems / this.pageSize) || 1
     },
 
-    // 批量操作
-    async handleBatchEnable(deviceIds) {
-      this.startLoading()
-      try {
-        await deviceService.batchEnableDevices(deviceIds)
-        this.fetchDeviceInstances() // 刷新数据
-        this.selectedInstances = []
-      } catch (error) {
-        this.errorMessage = error.message
-      } finally {
-        this.finishLoading()
-      }
-    },
-
-    async handleBatchDisable(deviceIds) {
-      this.startLoading()
-      try {
-        await deviceService.batchDisableDevices(deviceIds)
-        this.fetchDeviceInstances()
-        this.selectedInstances = []
-      } catch (error) {
-        this.errorMessage = error.message
-      } finally {
-        this.finishLoading()
-      }
-    },
-
-    async handleBatchDelete(deviceIds) {
-      this.startLoading()
-      try {
-        await deviceService.batchDeleteDevices(deviceIds)
-        this.fetchDeviceInstances()
-        this.selectedInstances = []
-      } catch (error) {
-        this.errorMessage = error.message
-      } finally {
-        this.finishLoading()
-      }
-    },
-
     // 状态管理
     startLoading() {
       this.loading = true
@@ -368,25 +324,8 @@ export default {
       console.log('导航切换:', navId)
     },
 
-    toggleSelectAll() {
-      this.selectedInstances = this.selectAll ? this.displayInstances.map((i) => i.id) : []
-    },
-
     handleMonitor(instanceId) {
       this.$router.push(`/data/device/monitor/${instanceId}`)
-    },
-
-    handleConfig(instanceId, protocol) {
-      this.$router.push(`/data/device/config/${instanceId}?protocol=${protocol}`)
-    },
-
-    handleEdit(instanceId) {
-      this.$router.push(`/data/device/edit/${instanceId}`)
-    },
-  },
-  watch: {
-    selectedInstances(newVal) {
-      this.selectAll = newVal.length === this.displayInstances.length
     },
   },
 }
@@ -518,16 +457,6 @@ export default {
   border-left: 2px solid #e0e0e0;
   width: 150px;
   min-width: 150px;
-}
-
-/* 固定第一列样式 */
-.instances-table th:first-child,
-.instances-table td:first-child {
-  position: sticky;
-  left: 0;
-  background-color: #f8f9fa;
-  z-index: 20;
-  border-right: 1px solid #e0e0e0;
 }
 
 /* 响应式设计 */

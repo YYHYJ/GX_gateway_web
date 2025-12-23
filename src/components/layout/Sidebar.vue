@@ -144,17 +144,17 @@ export default {
             {
               id: 'system-logs',
               name: '系统日志',
-              path: '/logs/system',
+              path: '/api/logs/system',
             },
             {
               id: 'operation-logs',
               name: '操作日志',
-              path: '/logs/operation',
+              path: '/api/logs/operation',
             },
             {
               id: 'communication-logs',
               name: '通信日志',
-              path: '/logs/communication',
+              path: '/api/logs/communication',
             },
           ],
         },

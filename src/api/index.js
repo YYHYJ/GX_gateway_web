@@ -14,7 +14,7 @@ export const deviceApi = {
     return request({
       url: '/device/templates',
       method: 'get',
-      params
+      params,
     })
   },
 
@@ -22,7 +22,7 @@ export const deviceApi = {
   getDeviceTemplate(id) {
     return request({
       url: `/device/template/${id}`,
-      method: 'get'
+      method: 'get',
     })
   },
 
@@ -31,7 +31,7 @@ export const deviceApi = {
     return request({
       url: '/device/template',
       method: 'post',
-      data
+      data,
     })
   },
 
@@ -40,7 +40,7 @@ export const deviceApi = {
     return request({
       url: `/device/template/${id}`,
       method: 'put',
-      data
+      data,
     })
   },
 
@@ -48,7 +48,7 @@ export const deviceApi = {
   deleteDeviceTemplate(id) {
     return request({
       url: `/device/template/${id}`,
-      method: 'delete'
+      method: 'delete',
     })
   },
 
@@ -57,7 +57,7 @@ export const deviceApi = {
     return request({
       url: '/device/model_detail_modbus1',
       method: 'post',
-      data
+      data,
     })
   },
 
@@ -66,7 +66,7 @@ export const deviceApi = {
     return request({
       url: '/device/save_modbus_point',
       method: 'post',
-      data
+      data,
     })
   },
 
@@ -74,7 +74,7 @@ export const deviceApi = {
   deleteModbusPoint(id) {
     return request({
       url: `/device/delete_modbus_point/${id}`,
-      method: 'delete'
+      method: 'delete',
     })
   },
 
@@ -83,7 +83,7 @@ export const deviceApi = {
     return request({
       url: '/device/batch_modbus_points',
       method: 'post',
-      data
+      data,
     })
   },
 
@@ -94,8 +94,8 @@ export const deviceApi = {
       method: 'post',
       data,
       headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+        'Content-Type': 'multipart/form-data',
+      },
     })
   },
 
@@ -105,9 +105,9 @@ export const deviceApi = {
       url: '/device/export_points',
       method: 'get',
       params,
-      responseType: 'blob'
+      responseType: 'blob',
     })
-  }
+  },
 }
 
 // 协议相关API
@@ -116,7 +116,7 @@ export const protocolApi = {
   getProtocolTypes() {
     return request({
       url: '/protocol/types',
-      method: 'get'
+      method: 'get',
     })
   },
 
@@ -124,7 +124,7 @@ export const protocolApi = {
   getProtocolConfig(protocolType, templateId) {
     return request({
       url: `/protocol/config/${protocolType}/${templateId}`,
-      method: 'get'
+      method: 'get',
     })
   },
 
@@ -133,7 +133,7 @@ export const protocolApi = {
     return request({
       url: `/protocol/config/${protocolType}/${templateId}`,
       method: 'post',
-      data
+      data,
     })
   },
 
@@ -142,9 +142,9 @@ export const protocolApi = {
     return request({
       url: `/protocol/test/${protocolType}`,
       method: 'post',
-      data: config
+      data: config,
     })
-  }
+  },
 }
 
 // 数据采集API
@@ -153,7 +153,7 @@ export const dataCollectionApi = {
   getProtocols() {
     return request({
       url: '/data/protocols',
-      method: 'get'
+      method: 'get',
     })
   },
 
@@ -161,7 +161,7 @@ export const dataCollectionApi = {
   getCommunicationInterfaces() {
     return request({
       url: '/data/interfaces',
-      method: 'get'
+      method: 'get',
     })
   },
 
@@ -170,7 +170,7 @@ export const dataCollectionApi = {
     return request({
       url: '/data/instances',
       method: 'get',
-      params
+      params,
     })
   },
 
@@ -179,9 +179,9 @@ export const dataCollectionApi = {
     return request({
       url: '/data/debug',
       method: 'post',
-      data
+      data,
     })
-  }
+  },
 }
 
 // 日志系统API
@@ -189,9 +189,9 @@ export const logApi = {
   // 系统日志
   getSystemLogs(params) {
     return request({
-      url: '/logs/system',
+      url: '/api/logs/system',
       method: 'get',
-      params
+      params,
     })
   },
 
@@ -200,7 +200,7 @@ export const logApi = {
     return request({
       url: '/logs/operation',
       method: 'get',
-      params
+      params,
     })
   },
 
@@ -209,9 +209,9 @@ export const logApi = {
     return request({
       url: '/logs/communication',
       method: 'get',
-      params
+      params,
     })
-  }
+  },
 }
 
 // OTA升级API
@@ -220,7 +220,7 @@ export const otaApi = {
   checkUpdate() {
     return request({
       url: '/ota/check',
-      method: 'get'
+      method: 'get',
     })
   },
 
@@ -229,7 +229,7 @@ export const otaApi = {
     return request({
       url: '/ota/upgrade',
       method: 'post',
-      data
+      data,
     })
   },
 
@@ -237,9 +237,9 @@ export const otaApi = {
   getUpgradeStatus() {
     return request({
       url: '/ota/status',
-      method: 'get'
+      method: 'get',
     })
-  }
+  },
 }
 
 // 系统API
@@ -262,7 +262,7 @@ export const systemApi = {
   getSettings() {
     return request({
       url: '/system/settings',
-      method: 'get'
+      method: 'get',
     })
   },
 
@@ -270,7 +270,7 @@ export const systemApi = {
     return request({
       url: '/system/settings',
       method: 'put',
-      data
+      data,
     })
   },
 
@@ -278,7 +278,7 @@ export const systemApi = {
   getNetworkConfig() {
     return request({
       url: '/system/network',
-      method: 'get'
+      method: 'get',
     })
   },
 
@@ -286,7 +286,7 @@ export const systemApi = {
     return request({
       url: '/system/network',
       method: 'put',
-      data
+      data,
     })
   },
 
@@ -295,7 +295,7 @@ export const systemApi = {
     return request({
       url: '/system/users',
       method: 'get',
-      params
+      params,
     })
   },
 
@@ -303,7 +303,7 @@ export const systemApi = {
     return request({
       url: '/system/user',
       method: 'post',
-      data
+      data,
     })
   },
 
@@ -311,14 +311,14 @@ export const systemApi = {
     return request({
       url: `/system/user/${id}`,
       method: 'put',
-      data
+      data,
     })
   },
 
   deleteUser(id) {
     return request({
       url: `/system/user/${id}`,
-      method: 'delete'
+      method: 'delete',
     })
   },
 
@@ -326,7 +326,7 @@ export const systemApi = {
   backupData() {
     return request({
       url: '/system/backup',
-      method: 'post'
+      method: 'post',
     })
   },
 
@@ -334,9 +334,9 @@ export const systemApi = {
     return request({
       url: '/system/restore',
       method: 'post',
-      data
+      data,
     })
-  }
+  },
 }
 
 // 用户认证API
@@ -359,9 +359,9 @@ export const authApi = {
   getUserInfo() {
     return request({
       url: '/auth/userinfo',
-      method: 'get'
+      method: 'get',
     })
-  }
+  },
 }
 
 // 导出所有API
