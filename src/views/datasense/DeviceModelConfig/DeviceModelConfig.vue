@@ -524,7 +524,6 @@ export default {
 </script>
 
 <style scoped>
-/* 只保留页面特有的样式，删除重复的全局样式 */
 /* 页面布局样式 */
 .device-template-page {
   display: flex;

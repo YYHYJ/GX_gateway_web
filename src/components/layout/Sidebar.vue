@@ -14,7 +14,7 @@
         class="nav-item"
         :class="{
           active: activeItem === item.id,
-          expanded: item.expanded,
+          expanded: shouldExpand(item),
           'has-children': item.children && item.children.length,
         }"
       >
@@ -36,7 +36,7 @@
             :to="child.path"
             class="submenu-item"
             :class="{ active: activeSubItem === child.id }"
-            @click="handleSubNavClick(child, item)"
+            @click="handleSubNavClick(child, item, $event)"
           >
             {{ child.name }}
           </router-link>
@@ -65,25 +65,24 @@ export default {
         {
           id: 'dashboard',
           name: '仪表盘',
-          icon: 'fas fa-tachometer-alt', // 仪表盘图标
+          icon: 'fas fa-tachometer-alt',
           path: '/dashboard',
         },
         {
           id: 'data-collection',
           name: '数据采集',
-          icon: 'fas fa-database', // 数据库图标
+          icon: 'fas fa-database',
           path: '',
-          expanded: true,
           children: [
             {
               id: 'DeviceTemplate',
               name: '设备模板',
-              path: '/data/device/modelConfig', // 修改为与API一致的路径
+              path: '/data/device/modelConfig',
             },
             {
               id: 'device-instance',
               name: '设备实例',
-              path: '/data/device/instance', //点击子菜单跳转到设备实例页面
+              path: '/data/device/instance',
             },
             {
               id: 'collection-debug',
@@ -95,17 +94,15 @@ export default {
         {
           id: 'data-forwarding',
           name: '数据转发',
-          icon: 'fas fa-exchange-alt', // 数据库图标
+          icon: 'fas fa-exchange-alt',
           path: '',
-          expanded: true,
           children: [],
         },
         {
           id: 'system-management',
           name: '系统管理',
-          icon: 'fas fa-cogs', // 齿轮组图标，比单个齿轮更合适
+          icon: 'fas fa-cogs',
           path: '',
-          expanded: false,
           children: [
             {
               id: 'system-settings',
@@ -137,9 +134,8 @@ export default {
         {
           id: 'log-system',
           name: '日志系统',
-          icon: 'fas fa-clipboard-list', // 列表图标
+          icon: 'fas fa-clipboard-list',
           path: '',
-          expanded: false,
           children: [
             {
               id: 'system-logs',
@@ -161,21 +157,110 @@ export default {
         {
           id: 'ota-upgrade',
           name: 'OTA升级',
-          icon: 'fas fa-cloud-upload-alt', // 云上传图标
+          icon: 'fas fa-cloud-upload-alt',
           path: '/ota',
-          expanded: false,
           children: [],
         },
       ],
+      // 手动展开的菜单ID
+      manuallyExpanded: null,
     }
   },
+  watch: {
+    $route: {
+      immediate: true,
+      handler(to) {
+        // 根据当前路由自动设置激活状态
+        this.updateActiveStateFromRoute(to)
+      },
+    },
+  },
+  computed: {
+    // 计算当前应该展开哪个菜单
+    currentExpandedMenuId() {
+      // 1. 如果有手动展开的菜单，使用它
+      if (this.manuallyExpanded) {
+        return this.manuallyExpanded
+      }
+
+      // 2. 如果当前有激活的一级菜单且有子菜单，使用它
+      if (this.activeItem) {
+        const menuItem = this.menuItems.find((item) => item.id === this.activeItem)
+        if (menuItem && menuItem.children && menuItem.children.length) {
+          return this.activeItem
+        }
+      }
+
+      // 3. 如果有激活的子菜单，展开其父菜单
+      if (this.activeSubItem) {
+        const parentMenu = this.menuItems.find(
+          (item) => item.children && item.children.some((child) => child.id === this.activeSubItem),
+        )
+        if (parentMenu) {
+          return parentMenu.id
+        }
+      }
+
+      return null
+    },
+  },
   methods: {
+    updateActiveStateFromRoute(route) {
+      // 查找匹配的路由对应的菜单项
+      let foundParent = null
+      let foundChild = null
+
+      for (const menuItem of this.menuItems) {
+        if (menuItem.path === route.path) {
+          foundParent = menuItem
+          break
+        }
+
+        if (menuItem.children) {
+          for (const childItem of menuItem.children) {
+            if (childItem.path === route.path) {
+              foundParent = menuItem
+              foundChild = childItem
+              break
+            }
+          }
+        }
+
+        if (foundParent) break
+      }
+
+      if (foundParent) {
+        // 如果有子菜单项匹配，确保父菜单展开
+        if (foundChild) {
+          this.manuallyExpanded = foundParent.id
+        }
+      }
+    },
+    // 判断菜单是否应该展开
+    shouldExpand(item) {
+      return item.id === this.currentExpandedMenuId
+    },
+
     // 处理主菜单点击
     handleNavClick(item) {
       if (item.children && item.children.length) {
-        this.toggleSubmenu(item)
+        // 如果当前已经是展开状态，则收起
+        if (this.manuallyExpanded === item.id) {
+          this.manuallyExpanded = null
+        } else {
+          // 否则展开
+          this.manuallyExpanded = item.id
+        }
+        // 只有当点击的菜单不是当前激活的菜单时才触发 nav-change
+        if (this.activeItem !== item.id) {
+          this.$emit('nav-change', item.id)
+        }
       } else {
-        this.$emit('nav-change', item.id)
+        this.manuallyExpanded = null
+        // 只有当点击的菜单不是当前激活的菜单时才触发 nav-change
+        if (this.activeItem !== item.id) {
+          this.$emit('nav-change', item.id)
+        }
         if (item.path) {
           this.$router.push(item.path)
         }
@@ -183,47 +268,26 @@ export default {
     },
 
     // 处理子菜单点击
-    handleSubNavClick(childItem, parentItem) {
+    handleSubNavClick(childItem, parentItem, event) {
+      if (event) {
+        event.stopPropagation()
+        event.preventDefault()
+      }
+
+      // 确保父菜单展开
+      this.manuallyExpanded = parentItem.id
+
+      // 只有当父菜单不是当前激活的菜单时才触发 nav-change
+      if (this.activeItem !== parentItem.id) {
+        this.$emit('nav-change', parentItem.id)
+      }
+
       this.$emit('sub-nav-change', {
         parent: parentItem.id,
         child: childItem.id,
       })
-      this.$emit('nav-change', childItem.id)
 
-      // 跳转到子菜单路由
-      if (childItem.path) {
-        this.$router.push(childItem.path)
-      }
-    },
-
-    // 切换子菜单展开状态
-    toggleSubmenu(item) {
-      // 创建新的数组确保响应性
-      this.menuItems = this.menuItems.map((menuItem) => {
-        if (menuItem.id === item.id) {
-          // 切换当前菜单的展开状态
-          return {
-            ...menuItem,
-            expanded: !menuItem.expanded,
-          }
-        } else {
-          // 关闭其他菜单
-          return {
-            ...menuItem,
-            expanded: false,
-          }
-        }
-      })
-    },
-
-    // 点击页面其他区域关闭菜单
-    closeAllSubmenus(event) {
-      if (!this.$el.contains(event.target)) {
-        this.menuItems = this.menuItems.map((item) => ({
-          ...item,
-          expanded: false,
-        }))
-      }
+      // 路由跳转由 router-link 处理
     },
   },
 }

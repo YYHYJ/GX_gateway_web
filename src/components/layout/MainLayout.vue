@@ -1,7 +1,11 @@
 <template>
   <div class="main-layout">
     <!-- 侧边栏 -->
-    <Sidebar :active-item="activeNav" @nav-change="handleNavChange" />
+    <Sidebar
+      :active-item="activeNav"
+      :active-sub-item="activeSubItem"
+      @nav-change="handleNavChange"
+    />
 
     <!-- 主内容区 -->
     <div class="main-content">
@@ -30,6 +34,11 @@ export default {
     activeNav: {
       type: String,
       default: 'dashboard',
+    },
+    activeSubItem: {
+      // 新增属性
+      type: String,
+      default: '',
     },
     userName: {
       type: String,

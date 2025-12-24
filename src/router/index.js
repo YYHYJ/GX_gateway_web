@@ -60,19 +60,19 @@ const routes = [
     path: '/api/logs/system',
     name: 'SystemLog',
     component: () => import('@/views/log/SystemLog.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, activeNav: 'log-system', activeSubItem: 'system-logs' },
   },
   {
     path: '/api/logs/operation',
     name: 'OperationLog',
     component: () => import('@/views/log/OperationLog.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, activeNav: 'log-system', activeSubItem: 'operation-logs' },
   },
   {
     path: '/api/logs/communication',
     name: 'CommunicationLog',
     component: () => import('@/views/log/CommunicationLog.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, activeNav: 'log-system', activeSubItem: 'communication-logs' },
   },
 ]
 
