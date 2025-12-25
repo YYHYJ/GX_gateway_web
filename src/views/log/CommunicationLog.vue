@@ -188,7 +188,8 @@ export default {
 
     filteredLogs() {
       return this.allLogs.filter((log) => {
-        const logTime = this.extractTime(log)
+        const logComponents = this.parseLogComponents(log)
+        const logTime = logComponents.time
         if (!logTime) return true
 
         if (this.startTime) {
@@ -205,7 +206,7 @@ export default {
         }
 
         if (this.selectedLevel !== 'all') {
-          const level = this.extractRawLevel(log)
+          const level = logComponents.level
           if (level !== this.selectedLevel) {
             return false
           }
@@ -400,56 +401,95 @@ export default {
       }
     },
 
-    extractRawLevel(log) {
-      const match = log.match(/\[(INFO|ERROR|WARN|DEBUG)\]/i)
-      return match ? match[1].toUpperCase() : 'INFO'
-    },
-
-    extractLevel(log) {
-      const rawLevel = this.extractRawLevel(log)
-      return rawLevel === 'WARN' ? 'WARNING' : rawLevel
-    },
-
-    extractTime(log) {
-      const match = log.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/)
-      return match ? match[1] : ''
-    },
-
-    extractModule(log) {
-      const matches = log.match(/\[([^\]]+)\]/g)
-      if (matches && matches.length >= 2) {
-        return matches[1]
-      }
-      return ''
-    },
-
-    extractSource(log) {
-      const matches = log.match(/\[([^\]]+)\]/g)
-      if (matches && matches.length >= 3) {
-        return matches[2]
-      }
-      return ''
-    },
-
-    extractMessage(log) {
-      const matches = log.match(/\[([^\]]+)\]/g)
-      if (matches && matches.length >= 3) {
-        const lastBracketIndex = log.lastIndexOf(']')
-        return log.substring(lastBracketIndex + 1).trim()
-      }
-
-      const timeMatch = log.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} /)
-      if (timeMatch) {
-        const afterTime = log.substring(timeMatch[0].length)
-        const levelMatch = afterTime.match(/^\[(INFO|ERROR|WARN|DEBUG)\]/i)
-        if (levelMatch) {
-          const afterLevel = afterTime.substring(levelMatch[0].length)
-          const cleanMessage = afterLevel.replace(/\[[^\]]+\]/g, '').trim()
-          return cleanMessage
+    // 新增：统一解析日志组件的方法
+    parseLogComponents(log) {
+      // 提取时间
+      const timeMatch = log.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/)
+      if (!timeMatch) {
+        return {
+          time: '',
+          level: 'INFO',
+          module: '',
+          source: '',
+          message: log,
         }
       }
 
-      return log
+      const time = timeMatch[1]
+      const afterTime = log.substring(timeMatch[0].length).trim()
+
+      // 提取日志级别（第一个方括号）
+      let level = 'INFO'
+      let position = 0
+
+      if (afterTime.startsWith('[')) {
+        const levelEnd = afterTime.indexOf(']')
+        if (levelEnd !== -1) {
+          const levelContent = afterTime.substring(1, levelEnd)
+          const normalizedLevel = levelContent.toUpperCase()
+          if (['INFO', 'WARN', 'ERROR', 'DEBUG'].includes(normalizedLevel)) {
+            level = normalizedLevel
+          }
+          position = levelEnd + 1
+        }
+      }
+
+      // 跳过可能的空格
+      let remaining = afterTime.substring(position).trim()
+
+      // 如果接下来是 [数字或字母]，可能是模块
+      let module = ''
+      if (remaining.startsWith('[')) {
+        const moduleEnd = remaining.indexOf(']')
+        if (moduleEnd !== -1) {
+          const moduleContent = remaining.substring(1, moduleEnd)
+          // 模块通常是数字字母组合，不包含方括号
+          if (!moduleContent.includes('[') && !moduleContent.includes(']')) {
+            // 简单验证：模块名通常是较短的标识符
+            if (moduleContent.length <= 50 && /^[A-Za-z0-9_\-\.]+$/.test(moduleContent)) {
+              module = moduleContent
+              remaining = remaining.substring(moduleEnd + 1).trim()
+            }
+          }
+        }
+      }
+
+      // 剩余部分全部作为消息
+      const message = remaining.trim()
+
+      return {
+        time,
+        level,
+        module,
+        source: '', // 你的日志格式中没有单独的来源字段
+        message,
+      }
+    },
+
+    // 基于新解析方法的提取函数
+    extractTime(log) {
+      return this.parseLogComponents(log).time
+    },
+
+    extractRawLevel(log) {
+      return this.parseLogComponents(log).level
+    },
+
+    extractLevel(log) {
+      const level = this.extractRawLevel(log)
+      return level === 'WARN' ? 'WARNING' : level
+    },
+
+    extractModule(log) {
+      return this.parseLogComponents(log).module
+    },
+
+    extractSource(log) {
+      return this.parseLogComponents(log).source
+    },
+
+    extractMessage(log) {
+      return this.parseLogComponents(log).message
     },
 
     getLogLevelClass(log) {

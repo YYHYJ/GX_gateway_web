@@ -198,7 +198,7 @@ export const logApi = {
   // 操作日志
   getOperationLogs(params) {
     return request({
-      url: '/logs/operation',
+      url: '/api/logs/operation',
       method: 'get',
       params,
     })
@@ -207,7 +207,7 @@ export const logApi = {
   // 通信日志
   getCommunicationLogs(params) {
     return request({
-      url: '/logs/communication',
+      url: '/api/logs/communication',
       method: 'get',
       params,
     })
