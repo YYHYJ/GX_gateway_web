@@ -85,6 +85,11 @@ export default {
               path: '/data/device/instance',
             },
             {
+              id: 'device-instances-monitor',
+              name: '实时数据',
+              path: '/data/device/instances/monitor',
+            },
+            {
               id: 'collection-debug',
               name: '采集调试',
               path: '/data/collection-debug',

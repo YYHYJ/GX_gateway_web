@@ -27,6 +27,15 @@ export default defineConfig({
         secure: false, // 如果是https，需要设置为false
         //rewrite: (path) => path.replace(/^\/api/, '/api'), // 路径重写
       },
+
+      // WebSocket代理 - 必须单独配置
+      '/ws': {
+        target: 'ws://172.27.135.60:8080',
+        changeOrigin: true,
+        secure: false,
+        ws: true, // 启用WebSocket代理
+        rewrite: (path) => path.replace(/^\/ws/, '/ws'),
+      },
     },
   },
 

@@ -829,9 +829,9 @@ export default {
 }
 
 .log-time {
-  color: #666;
+  color: #333;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   min-width: 160px;
   font-family: 'Monaco', 'Menlo', monospace;
 }
@@ -841,6 +841,7 @@ export default {
   padding: 4px 10px;
   border-radius: 12px;
   font-size: 11px;
+  font-weight: 700; /* 加粗 */
   font-weight: bold;
   text-transform: uppercase;
 }
@@ -866,16 +867,15 @@ export default {
 }
 
 .log-module {
-  color: #6c757d;
+  color: #555;
   font-size: 12px;
-  font-style: italic;
   background: #f8f9fa;
   padding: 3px 8px;
   border-radius: 4px;
 }
 
 .log-source {
-  color: #17a2b8;
+  color: #0d6efd;
   font-size: 12px;
   background: #e8f4f8;
   padding: 3px 8px;
@@ -883,10 +883,11 @@ export default {
 }
 
 .log-content {
-  color: #333;
+  color: #222;
   word-break: break-all;
   white-space: pre-wrap;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   line-height: 1.6;
 }

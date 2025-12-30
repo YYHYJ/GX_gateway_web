@@ -325,7 +325,13 @@ export default {
     },
 
     handleMonitor(instanceId) {
-      this.$router.push(`/data/device/monitor/${instanceId}`)
+      // 使用 query 参数传递实例ID
+      this.$router.push({
+        name: 'Datamonitor',
+        query: {
+          instanceId: instanceId,
+        },
+      })
     },
   },
 }

@@ -24,7 +24,6 @@ const routes = [
     component: () => import('@/views/datasense/DeviceModelConfig/DeviceModelConfig.vue'),
     meta: { requiresAuth: true },
   },
-
   {
     path: '/data/device/modelConfig/:templateId/communication',
     name: 'CommunicationSpec',
@@ -54,6 +53,18 @@ const routes = [
     path: '/data/device/instance',
     name: 'DeviceInstance',
     component: () => import('@/views/datasense/DeviceConfig/DeviceConfig.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/data/device/instance/monitor',
+    name: 'Datamonitor',
+    component: () => import('@/views/datasense/DeviceConfig/DataMonitor.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/data/device/instances/monitor',
+    name: 'Datasmonitor',
+    component: () => import('@/views/datasense/DeviceConfig/DatasMonitor.vue'),
     meta: { requiresAuth: true },
   },
   {

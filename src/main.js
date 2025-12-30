@@ -5,6 +5,22 @@ import router from './router'
 // 导入全局样式
 import './styles/common.css'
 import messageService from './utils/message'
+import { eventBus, WSEvent } from '@/utils/websocket'
+
+// 全局错误处理
+eventBus.on(WSEvent.ERROR, (error) => {
+  console.error('WebSocket错误:', error)
+})
+
+// 全局连接状态监听
+eventBus.on(WSEvent.CONNECTED, () => {
+  console.log('WebSocket已连接')
+})
+
+// 全局断开连接处理
+eventBus.on(WSEvent.DISCONNECTED, () => {
+  console.warn('WebSocket已断开')
+})
 
 // 创建Vue应用
 const app = createApp(App)
