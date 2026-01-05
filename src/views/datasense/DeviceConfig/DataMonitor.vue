@@ -88,11 +88,7 @@
               <h3>
                 <i class="fas fa-table"></i>
                 实时数据
-                <span class="data-count">({{ realtimeData.length }} 个数据点)</span>
               </h3>
-              <div class="data-update" v-if="lastUpdateTime">
-                最后更新: {{ formatTime(lastUpdateTime) }}
-              </div>
             </div>
 
             <div class="table-container">
@@ -608,17 +604,6 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.data-count {
-  font-size: 14px;
-  font-weight: normal;
-  color: #6c757d;
-}
-
-.data-update {
-  font-size: 14px;
-  color: #6c757d;
 }
 
 .table-container {

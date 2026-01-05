@@ -86,7 +86,7 @@ export default {
             },
             {
               id: 'device-instances-monitor',
-              name: '实时数据',
+              name: '实时监控',
               path: '/data/device/instances/monitor',
             },
             {
