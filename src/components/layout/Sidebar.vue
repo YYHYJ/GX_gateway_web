@@ -90,9 +90,9 @@ export default {
               path: '/data/device/instances/monitor',
             },
             {
-              id: 'collection-debug',
-              name: '采集调试',
-              path: '/data/collection-debug',
+              id: 'device-data-store',
+              name: '数据存储',
+              path: '/data/datastore',
             },
           ],
         },
@@ -101,7 +101,23 @@ export default {
           name: '数据转发',
           icon: 'fas fa-exchange-alt',
           path: '',
-          children: [],
+          children: [
+            {
+              id: 'mqtt-transform',
+              name: 'MQTT',
+              path: '/transform/mqtt',
+            },
+            {
+              id: 'modbus-transform',
+              name: '北向Modbus',
+              path: '/transform/modbus',
+            },
+            {
+              id: 'influx-transform',
+              name: 'InfluxDB存储',
+              path: '/transform/influxdb',
+            },
+          ],
         },
         {
           id: 'system-management',

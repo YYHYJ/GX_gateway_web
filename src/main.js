@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
+import request from './utils/request'
 
 // 导入全局样式
 import './styles/common.css'
@@ -31,6 +32,8 @@ app.config.globalProperties.$message = messageService
 // 也可以添加到 app 实例上，方便访问
 app.$message = messageService
 
+// 将axios实例挂载到Vue全局属性
+app.config.globalProperties.$axios = request
 // 使用路由
 app.use(router)
 

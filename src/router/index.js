@@ -68,6 +68,19 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/data/datastore',
+    name: 'DataStoreConfig',
+    component: () => import('@/views/datasense/datastore/datastore.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/transform/mqtt',
+    name: 'MqttConfig',
+    component: () => import('@/views/transform/mqtt/mqtt.vue'),
+    meta: { requiresAuth: true },
+  },
+
+  {
     path: '/logs/system',
     name: 'SystemLog',
     component: () => import('@/views/log/SystemLog.vue'),
