@@ -281,7 +281,8 @@
 <script>
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
-import { wsService, eventBus, WSEvent } from '@/utils/websocket'
+import { wsService } from '@/utils/websocket' // 只导入 wsService
+import { WSEvent } from '@/utils/websocket' // 从同一模块导入
 import { deviceService } from '@/views/datasense/DeviceConfig/services/deviceService.js'
 import axios from 'axios'
 
@@ -351,6 +352,10 @@ export default {
         this.handleDeviceChange()
       }, 100)
     }
+
+    // 添加调试功能到控制台
+    window.debugWS = this.debugWebSocketStatus
+    console.log('调试命令已注册: debugWS()')
   },
 
   beforeUnmount() {
@@ -359,20 +364,17 @@ export default {
   },
 
   computed: {
-    // 计算可写点的数量
     writablePointsCount() {
       if (!this.realtimeData || !Array.isArray(this.realtimeData)) return 0
       return this.realtimeData.filter((point) => point.writable).length
     },
 
-    // 判断是否有可写点
     hasWritablePoints() {
       return this.writablePointsCount > 0
     },
   },
 
   watch: {
-    // 监听调试模式开关
     isDebugMode(newVal) {
       if (newVal) {
         this.initializeDebugLogs()
@@ -442,15 +444,23 @@ export default {
         this.debugLogs = []
         this.totalDebugLogs = 0
 
-        setTimeout(() => {
-          this.initWebSocket()
-        }, 100)
+        console.log('[组件] 开始初始化WebSocket，当前连接状态:', wsService.isConnected)
+
+        // 直接初始化
+        this.initWebSocket()
+
+        // 如果已连接，发送订阅
+        if (wsService.isConnected) {
+          setTimeout(() => {
+            this.sendSubscribe()
+          }, 100)
+        }
       }
     },
 
     // 取消当前设备的订阅
     unsubscribeCurrentDevice() {
-      if (this.currentSubscription && this.isWebSocketConnected) {
+      if (this.currentSubscription && wsService.isConnected) {
         const unsubscribeMessage = {
           type: 'unsubscribe',
           device_id: Number(this.currentSubscription.id),
@@ -463,6 +473,211 @@ export default {
       this.currentSubscription = null
       this.cleanupWebSocketSubscription()
       this.isWebSocketConnected = false
+    },
+
+    // 初始化WebSocket
+    initWebSocket() {
+      if (!this.selectedDevice) return
+
+      console.log('[组件] 初始化WebSocket监听器')
+
+      // 清理旧的监听器 - 使用 wsService
+      wsService.off(WSEvent.CONNECTED, this.handleWebSocketConnected)
+      wsService.off(WSEvent.DISCONNECTED, this.handleWebSocketDisconnected)
+      wsService.off(WSEvent.MESSAGE, this.handleAllMessages)
+
+      // 设置新的监听器 - 使用 wsService
+      wsService.on(WSEvent.CONNECTED, this.handleWebSocketConnected)
+      wsService.on(WSEvent.DISCONNECTED, this.handleWebSocketDisconnected)
+      wsService.on(WSEvent.MESSAGE, this.handleAllMessages)
+
+      this.isWebSocketConnected = wsService.isConnected
+
+      console.log('[组件] WebSocket监听器已设置，当前连接状态:', this.isWebSocketConnected)
+
+      if (!this.isWebSocketConnected) {
+        console.log('[组件] 未连接，开始连接...')
+        wsService.connect()
+      } else {
+        console.log('[组件] 已连接，准备发送订阅...')
+        this.sendSubscribe()
+      }
+    },
+
+    // 发送订阅消息
+    sendSubscribe() {
+      if (!this.selectedDevice) {
+        console.log('[组件] 没有选择设备，不发送订阅')
+        return
+      }
+
+      console.log(
+        '[组件] 发送订阅消息，设备ID:',
+        this.selectedDevice.id,
+        '设备代码:',
+        this.selectedDevice.device_code,
+      )
+
+      const message = {
+        type: 'subscribe',
+        device_id: Number(this.selectedDevice.id),
+        device_code: this.selectedDevice.device_code,
+        timestamp: Date.now(),
+      }
+
+      const success = wsService.send(message)
+      console.log('[组件] 订阅消息发送结果:', success ? '✅ 成功' : '❌ 失败')
+
+      // 如果发送失败，尝试通过subscribe方法订阅
+      if (!success) {
+        console.log('[组件] 订阅消息发送失败，尝试通过wsService.subscribe')
+        if (this.wsUnsubscribe) {
+          this.wsUnsubscribe()
+        }
+        this.wsUnsubscribe = wsService.subscribe(
+          String(this.selectedDevice.id),
+          this.handleDeviceData,
+        )
+      }
+    },
+
+    // WebSocket连接成功
+    handleWebSocketConnected() {
+      console.log('[组件] WebSocket连接成功')
+      this.isWebSocketConnected = true
+      this.$message.success('WebSocket连接成功')
+
+      setTimeout(() => {
+        this.sendSubscribe()
+      }, 500)
+    },
+
+    // WebSocket断开连接
+    handleWebSocketDisconnected() {
+      console.log('[组件] WebSocket连接断开')
+      this.isWebSocketConnected = false
+      this.$message.warning('WebSocket连接已断开')
+
+      this.cleanupWebSocketSubscription()
+      this.currentSubscription = null
+    },
+
+    // 处理所有WebSocket消息
+    handleAllMessages(data) {
+      console.log('[组件] 收到WebSocket消息:', data)
+
+      if (data.type === 'subscribe_response') {
+        console.log('[组件] 收到订阅响应:', data)
+        if (data.success) {
+          this.$message.success('订阅成功')
+          this.loadingData = false
+        } else {
+          this.$message.warning(`订阅失败: ${data.message}`)
+          this.loadingData = false
+        }
+        return
+      }
+
+      if (data.device_id || data.device_code) {
+        console.log('[组件] 收到设备数据，开始处理')
+        this.handleDeviceData(data)
+      } else {
+        console.log('[组件] 收到非设备数据消息:', data)
+      }
+    },
+
+    // 处理设备数据
+    handleDeviceData(data) {
+      if (!this.selectedDevice) {
+        console.log('[组件] 没有选择设备，忽略数据')
+        return
+      }
+
+      console.log('[组件] 处理设备数据，当前设备:', {
+        选择设备ID: this.selectedDevice.id,
+        选择设备代码: this.selectedDevice.device_code,
+        收到设备ID: data.device_id,
+        收到设备代码: data.device_code,
+      })
+
+      const isMatch =
+        String(data.device_id) === String(this.selectedDevice.id) ||
+        String(data.device_code) === String(this.selectedDevice.device_code)
+
+      console.log('[组件] 设备匹配结果:', isMatch ? '✅ 匹配' : '❌ 不匹配')
+
+      if (isMatch) {
+        console.log('[组件] 数据匹配成功，更新界面')
+        this.lastUpdateTime = Date.now()
+        this.loadingData = false
+
+        if (data.points && data.points.length > 0) {
+          console.log('[组件] 有数据点，数量:', data.points.length)
+          this.updateRealtimeData(data.points)
+        } else {
+          console.log('[组件] 没有数据点')
+          this.realtimeData = []
+        }
+      } else {
+        console.log('[组件] 设备不匹配，忽略数据')
+      }
+    },
+
+    // 更新实时数据
+    updateRealtimeData(points) {
+      if (!points || !Array.isArray(points)) {
+        this.realtimeData = []
+        return
+      }
+
+      try {
+        this.realtimeData = points.map((point, index) => ({
+          point_code: String(point.point_code || point.code || `point_${index}`),
+          value: point.value !== undefined ? String(point.value) : '--',
+          raw_value: String(point.raw_value || point.raw || ''),
+          unit: String(point.unit || ''),
+          writable: Boolean(point.writable),
+          timestamp: point.timestamp || Date.now(),
+        }))
+      } catch (error) {
+        console.error('更新实时数据失败:', error)
+        this.realtimeData = []
+      }
+    },
+
+    // 清理WebSocket订阅
+    cleanupWebSocketSubscription() {
+      console.log('[组件] 清理WebSocket订阅')
+
+      if (this.wsUnsubscribe) {
+        this.wsUnsubscribe()
+        this.wsUnsubscribe = null
+      }
+
+      // 使用 wsService 取消监听
+      wsService.off(WSEvent.CONNECTED, this.handleWebSocketConnected)
+      wsService.off(WSEvent.DISCONNECTED, this.handleWebSocketDisconnected)
+      wsService.off(WSEvent.MESSAGE, this.handleAllMessages)
+    },
+
+    // 重新连接WebSocket
+    reconnectWebSocket() {
+      if (!this.selectedDevice) return
+
+      this.loadingData = true
+      this.cleanupWebSocketSubscription()
+
+      if (wsService.isConnected) {
+        if (this.currentSubscription) {
+          this.unsubscribeCurrentDevice()
+        }
+        wsService.disconnect()
+      }
+
+      setTimeout(() => {
+        this.initWebSocket()
+        wsService.connect()
+      }, 1000)
     },
 
     // 刷新设备列表
@@ -791,151 +1006,6 @@ export default {
       }
     },
 
-    // ============== WebSocket相关方法 ==============
-
-    // 初始化WebSocket
-    initWebSocket() {
-      if (!this.selectedDevice) return
-
-      // 清理旧的监听器
-      eventBus.off(WSEvent.CONNECTED, this.handleWebSocketConnected)
-      eventBus.off(WSEvent.DISCONNECTED, this.handleWebSocketDisconnected)
-      eventBus.off(WSEvent.MESSAGE, this.handleAllMessages)
-
-      // 设置新的监听器
-      eventBus.on(WSEvent.CONNECTED, this.handleWebSocketConnected)
-      eventBus.on(WSEvent.DISCONNECTED, this.handleWebSocketDisconnected)
-      eventBus.on(WSEvent.MESSAGE, this.handleAllMessages)
-
-      this.isWebSocketConnected = wsService.isConnected
-
-      if (!this.isWebSocketConnected) {
-        wsService.connect()
-      } else {
-        this.sendSubscribe()
-      }
-    },
-
-    // 发送订阅消息
-    sendSubscribe() {
-      if (!this.selectedDevice) return
-
-      const message = {
-        type: 'subscribe',
-        device_id: Number(this.selectedDevice.id),
-        device_code: this.selectedDevice.device_code,
-        timestamp: Date.now(),
-      }
-      wsService.send(message)
-    },
-
-    // WebSocket连接成功
-    handleWebSocketConnected() {
-      this.isWebSocketConnected = true
-      this.$message.success('WebSocket连接成功')
-
-      setTimeout(() => {
-        this.sendSubscribe()
-      }, 500)
-    },
-
-    // WebSocket断开连接
-    handleWebSocketDisconnected() {
-      this.isWebSocketConnected = false
-      this.$message.warning('WebSocket连接已断开')
-
-      this.cleanupWebSocketSubscription()
-      this.currentSubscription = null
-    },
-
-    // 处理所有WebSocket消息
-    handleAllMessages(data) {
-      if (data.type === 'subscribe_response') {
-        if (data.success) {
-          this.$message.success('订阅成功')
-        } else {
-          this.$message.warning(`订阅失败: ${data.message}`)
-        }
-        return
-      }
-
-      if (data.device_id || data.device_code) {
-        this.handleDeviceData(data)
-      }
-    },
-
-    // 处理设备数据
-    handleDeviceData(data) {
-      if (!this.selectedDevice) return
-
-      const isMatch =
-        String(data.device_id) === String(this.selectedDevice.id) ||
-        String(data.device_code) === String(this.selectedDevice.device_code)
-
-      if (isMatch) {
-        this.lastUpdateTime = Date.now()
-        this.loadingData = false
-
-        if (data.points && data.points.length > 0) {
-          this.updateRealtimeData(data.points)
-        }
-      }
-    },
-
-    // 更新实时数据
-    updateRealtimeData(points) {
-      if (!points || !Array.isArray(points)) {
-        this.realtimeData = []
-        return
-      }
-
-      try {
-        this.realtimeData = points.map((point, index) => ({
-          point_code: String(point.point_code || point.code || `point_${index}`),
-          value: point.value !== undefined ? String(point.value) : '--',
-          raw_value: String(point.raw_value || point.raw || ''),
-          unit: String(point.unit || ''),
-          writable: Boolean(point.writable),
-          timestamp: point.timestamp || Date.now(),
-        }))
-      } catch (error) {
-        console.error('更新实时数据失败:', error)
-        this.realtimeData = []
-      }
-    },
-
-    // 重新连接WebSocket
-    reconnectWebSocket() {
-      if (!this.selectedDevice) return
-
-      this.loadingData = true
-      this.cleanupWebSocketSubscription()
-
-      if (wsService.isConnected) {
-        if (this.currentSubscription) {
-          this.unsubscribeCurrentDevice()
-        }
-        wsService.disconnect()
-      }
-
-      setTimeout(() => {
-        this.initWebSocket()
-        wsService.connect()
-      }, 1000)
-    },
-
-    // 清理WebSocket订阅
-    cleanupWebSocketSubscription() {
-      if (this.wsUnsubscribe) {
-        this.wsUnsubscribe()
-        this.wsUnsubscribe = null
-      }
-
-      eventBus.off(WSEvent.CONNECTED, this.handleWebSocketConnected)
-      eventBus.off(WSEvent.DISCONNECTED, this.handleWebSocketDisconnected)
-      eventBus.off(WSEvent.MESSAGE, this.handleAllMessages)
-    },
-
     // ============== 写入操作相关 ==============
 
     // 写入数据
@@ -1019,6 +1089,23 @@ export default {
         minute: '2-digit',
         second: '2-digit',
       })
+    },
+
+    // 调试函数：检查WebSocket状态
+    debugWebSocketStatus() {
+      console.group('[组件] WebSocket状态调试')
+      console.log('wsService:', wsService)
+      console.log('连接状态:', {
+        isConnected: wsService.isConnected,
+        isConnecting: wsService.isConnecting,
+        readyState: wsService.ws?.readyState,
+      })
+      console.log('当前订阅:', wsService.subscribers)
+      console.log('当前设备ID:', this.selectedDevice?.id)
+      console.log('当前设备代码:', this.selectedDevice?.device_code)
+      console.log('当前订阅列表:', Array.from(wsService.subscribers.keys()))
+      console.log('wsService.getStatus():', wsService.getStatus())
+      console.groupEnd()
     },
 
     // 导航处理

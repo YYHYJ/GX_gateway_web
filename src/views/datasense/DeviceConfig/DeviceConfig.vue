@@ -155,12 +155,6 @@ export default {
             this.showCreateModal = true
           },
         },
-        {
-          text: '应用编辑',
-          type: 'warning',
-          icon: 'fas fa-sync-alt',
-          handler: this.handleApplyEdit,
-        },
       ],
       searchKeyword: '',
       statusFilter: '',
@@ -175,12 +169,10 @@ export default {
       showCreateModal: false,
       showEditModal: false,
       editingDeviceId: null,
-      applyingEdit: false,
     }
   },
   created() {
     this.fetchDeviceInstances()
-    this.showRestartSuccessMessage()
   },
   computed: {
     displayInstances() {
@@ -190,55 +182,6 @@ export default {
     },
   },
   methods: {
-    // 新增：应用编辑方法
-    async handleApplyEdit() {
-      if (
-        !confirm(
-          '确定要应用编辑并重启网关程序吗？\n\n系统将在10秒内重启，重启完成后页面会自动刷新。',
-        )
-      ) {
-        return
-      }
-
-      try {
-        const response = await fetch('/api/system/restart')
-        const result = await response.json()
-
-        if (response.ok && result.code === 200) {
-          // 在 sessionStorage 中设置标志（刷新后有效）
-          sessionStorage.setItem('restart_success', 'true')
-
-          // 立即显示即将刷新的提示
-          alert('✅ 重启指令已发送！页面将在10秒后自动刷新...')
-
-          // 10秒后刷新页面
-          setTimeout(() => {
-            window.location.reload()
-          }, 10000)
-        } else {
-          alert(`❌ 重启失败: ${result.message || '未知错误'}`)
-        }
-      } catch (error) {
-        alert(`❌ 重启失败: ${error.message || '网络错误'}`)
-      }
-    },
-
-    // 显示重启成功消息
-    showRestartSuccessMessage() {
-      // 检查是否有重启成功的标志
-      const restartSuccess = sessionStorage.getItem('restart_success')
-
-      if (restartSuccess === 'true') {
-        // 等待页面加载完成后显示提示
-        setTimeout(() => {
-          alert('🎉 网关重启成功！系统已恢复正常运行。')
-
-          // 清除标志，避免下次刷新还显示
-          sessionStorage.removeItem('restart_success')
-        }, 800) // 延迟一点，确保页面完全加载
-      }
-    },
-
     // 数据获取
     async fetchDeviceInstances() {
       this.startLoading()

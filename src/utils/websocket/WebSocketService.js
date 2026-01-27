@@ -1,5 +1,6 @@
 /**
- * WebSocket 服务类 - 修复版
+ * WebSocket 服务类
+ * 这是一个单例类，整个应用只有一个实例
  */
 import { eventBus } from './eventBus.js'
 import {
@@ -22,21 +23,18 @@ class WebSocketService {
     this.heartbeatTimer = null
     this.heartbeatTimeoutTimer = null
 
-    // 订阅管理器 - 使用字符串作为key
     this.subscribers = new Map()
-
     this.messageQueue = []
     this.isConnected = false
     this.isConnecting = false
     this.lastHeartbeatTime = null
 
-    // 配置
     this.config = {
       url: import.meta.env.VITE_WS_URL || `ws://${window.location.host}/ws`,
       autoConnect: true,
       autoReconnect: true,
       maxQueueSize: 100,
-      debug: true, // 强制开启调试
+      debug: true,
     }
 
     this.init()
@@ -81,33 +79,42 @@ class WebSocketService {
     this.reconnectAttempts = 0
 
     console.log('[WebSocket] ✅ 连接成功')
-    eventBus.emit(WSEvent.CONNECTED, event)
 
-    // 发送认证
+    // 使用新的事件接口
+    this.emit(WSEvent.CONNECTED, event)
+
     this.sendAuth()
-
-    // 启动心跳
     this.startHeartbeat()
-
-    // 发送队列消息
     this.flushMessageQueue()
 
-    // 重新订阅（连接成功后立即执行）
-    this.resubscribeAll()
+    // 延迟执行重新订阅，确保认证完成
+    setTimeout(() => {
+      this.resubscribeAll()
+    }, 200)
   }
 
   handleMessage(event) {
+    const receiveTime = Date.now()
+    console.log(`[WebSocket] 📨 ${receiveTime} - 收到原始消息`)
     try {
       const data = JSON.parse(event.data)
       console.log('[WebSocket] 📨 收到消息:', data)
 
-      // 处理心跳
       if (data.type === MessageType.PONG) {
-        this.handlePong(data)
+        this.handlePong()
         return
       }
 
-      // 处理设备数据 - 关键修复：统一使用字符串匹配
+      // 处理订阅响应
+      if (data.type === 'subscribe_response') {
+        console.log(`[WebSocket] 📋 订阅响应:`, {
+          成功: data.success,
+          消息: data.message,
+          设备ID: data.device_id,
+        })
+        return
+      }
+
       if (data.device_id !== undefined) {
         const deviceIdStr = String(data.device_id)
 
@@ -115,14 +122,18 @@ class WebSocketService {
           原始ID: data.device_id,
           字符串ID: deviceIdStr,
           当前订阅列表: Array.from(this.subscribers.keys()),
+          详情: Array.from(this.subscribers.entries()).map(
+            ([id, callbacks]) => `${id}: ${callbacks.size}个回调`,
+          ),
         })
 
         if (this.subscribers.has(deviceIdStr)) {
           const callbacks = this.subscribers.get(deviceIdStr)
-          console.log(`[WebSocket] ✅ 找到 ${callbacks.size} 个订阅者`)
+          console.log(`[WebSocket] 🔄 ${Date.now()} - 执行 ${callbacks.size} 个回调`)
 
-          callbacks.forEach((callback) => {
+          callbacks.forEach((callback, index) => {
             try {
+              console.log(`[WebSocket] 🔄 执行回调 ${index + 1}/${callbacks.size}`)
               callback(data)
             } catch (error) {
               console.error(`设备 ${deviceIdStr} 回调失败:`, error)
@@ -130,21 +141,21 @@ class WebSocketService {
           })
         } else {
           console.warn(`[WebSocket] ⚠️ 未找到设备订阅: ${deviceIdStr}`)
+          console.warn(`[WebSocket] ℹ️ 可能原因：订阅消息还未发送或服务器提前返回数据`)
         }
       }
 
-      // 全局事件
-      eventBus.emit(WSEvent.MESSAGE, data)
+      this.emit(WSEvent.MESSAGE, data)
       if (data.type) {
-        eventBus.emit(`ws:message:${data.type}`, data)
+        this.emit(`ws:message:${data.type}`, data)
       }
     } catch (error) {
       console.error('[WebSocket] 消息解析失败:', error)
-      eventBus.emit(WSEvent.ERROR, { type: 'parse_error', error })
+      this.emit(WSEvent.ERROR, { type: 'parse_error', error })
     }
   }
 
-  handlePong(data) {
+  handlePong() {
     this.lastHeartbeatTime = Date.now()
     clearTimeout(this.heartbeatTimeoutTimer)
   }
@@ -155,7 +166,7 @@ class WebSocketService {
     console.log('[WebSocket] 连接关闭', event.code, event.reason)
 
     this.clearHeartbeat()
-    eventBus.emit(WSEvent.DISCONNECTED, event)
+    this.emit(WSEvent.DISCONNECTED, event)
 
     if (
       event.code !== WSStatusCode.NORMAL_CLOSURE &&
@@ -169,7 +180,7 @@ class WebSocketService {
   handleError(error) {
     this.isConnecting = false
     console.error('[WebSocket] 错误:', error)
-    eventBus.emit(WSEvent.ERROR, { type: 'connection_error', error })
+    this.emit(WSEvent.ERROR, { type: 'connection_error', error })
   }
 
   send(message) {
@@ -180,11 +191,11 @@ class WebSocketService {
     }
 
     try {
-      // 特殊处理订阅消息
       if (message.type === MessageType.SUBSCRIBE) {
         console.log('[WebSocket] 📤 发送订阅消息:', {
           设备ID: message.device_id,
           时间: new Date().toLocaleTimeString(),
+          连接状态: '已连接',
         })
       }
 
@@ -197,7 +208,6 @@ class WebSocketService {
     }
   }
 
-  // 核心修复：确保订阅一定成功
   subscribe(deviceId, callback) {
     const deviceIdStr = String(deviceId)
 
@@ -205,6 +215,10 @@ class WebSocketService {
       原始ID: deviceId,
       存储为: deviceIdStr,
       已有订阅: this.subscribers.has(deviceIdStr),
+      连接状态: {
+        isConnected: this.isConnected,
+        isConnecting: this.isConnecting,
+      },
     })
 
     if (!this.subscribers.has(deviceIdStr)) {
@@ -214,18 +228,32 @@ class WebSocketService {
     const callbacks = this.subscribers.get(deviceIdStr)
     callbacks.add(callback)
 
-    console.log(`[WebSocket] ✅ 订阅成功，设备: ${deviceIdStr}，订阅者: ${callbacks.size}`)
+    console.log(`[WebSocket] ✅ 本地订阅成功，设备: ${deviceIdStr}，订阅者: ${callbacks.size}`)
 
-    // 立即发送订阅消息，并确保发送成功
-    this.ensureSubscribeMessage(deviceIdStr)
+    // 如果已连接，立即发送订阅消息
+    if (this.isConnected) {
+      console.log(`[WebSocket] 🔗 已连接，立即发送订阅: ${deviceIdStr}`)
+      this.ensureSubscribeMessage(deviceIdStr)
+    } else {
+      console.log(`[WebSocket] ⏳ 未连接，订阅将在连接成功后自动发送`)
+      // 监听连接事件，连接成功后发送订阅
+      const unsubscribe = this.on(WSEvent.CONNECTED, () => {
+        setTimeout(() => {
+          console.log(`[WebSocket] 🔗 连接成功，现在发送订阅: ${deviceIdStr}`)
+          this.ensureSubscribeMessage(deviceIdStr)
+          unsubscribe() // 只执行一次
+        }, 300)
+      })
+    }
 
     return () => {
       this.unsubscribe(deviceIdStr, callback)
     }
   }
 
-  // 确保订阅消息发送成功
   ensureSubscribeMessage(deviceIdStr) {
+    console.log(`[WebSocket] 📨 确保订阅消息发送: ${deviceIdStr}`)
+
     const sendSubscribe = () => {
       const success = this.send({
         type: MessageType.SUBSCRIBE,
@@ -236,19 +264,24 @@ class WebSocketService {
       if (!success) {
         console.log(`[WebSocket] ⏳ 订阅消息入队，1秒后重试: ${deviceIdStr}`)
         setTimeout(() => sendSubscribe(), 1000)
+      } else {
+        console.log(`[WebSocket] ✅ 订阅消息已发送: ${deviceIdStr}`)
       }
     }
 
     sendSubscribe()
 
-    // 3秒后再发送一次，确保后端收到
+    // 3秒后再发送一次确认
     setTimeout(() => {
-      this.send({
-        type: MessageType.SUBSCRIBE,
-        device_id: deviceIdStr,
-        timestamp: Date.now(),
-        confirm: true,
-      })
+      if (this.isConnected) {
+        this.send({
+          type: MessageType.SUBSCRIBE,
+          device_id: deviceIdStr,
+          timestamp: Date.now(),
+          confirm: true,
+        })
+        console.log(`[WebSocket] 🔁 发送订阅确认: ${deviceIdStr}`)
+      }
     }, 3000)
   }
 
@@ -269,22 +302,23 @@ class WebSocketService {
     }
   }
 
-  // 重连时重新订阅
   resubscribeAll() {
-    if (this.subscribers.size === 0) return
+    if (this.subscribers.size === 0) {
+      console.log('[WebSocket] ℹ️ 没有需要重新订阅的设备')
+      return
+    }
 
     console.log(`[WebSocket] 🔄 重新订阅 ${this.subscribers.size} 个设备...`)
 
     this.subscribers.forEach((callbacks, deviceId) => {
       if (callbacks.size > 0) {
-        // 给每个设备发送订阅消息
+        console.log(`[WebSocket] 🔁 重订阅设备: ${deviceId} (${callbacks.size}个订阅者)`)
         this.send({
           type: MessageType.SUBSCRIBE,
           device_id: deviceId,
           timestamp: Date.now(),
           reconnect: true,
         })
-        console.log(`[WebSocket] 🔁 重订阅设备: ${deviceId}`)
       }
     })
   }
@@ -321,7 +355,7 @@ class WebSocketService {
     )
 
     console.log(`[WebSocket] ⏰ 计划重连，第 ${this.reconnectAttempts} 次，延迟 ${delay}ms`)
-    eventBus.emit(WSEvent.RECONNECTING, { attempt: this.reconnectAttempts, delay })
+    this.emit(WSEvent.RECONNECTING, { attempt: this.reconnectAttempts, delay })
 
     this.reconnectTimer = setTimeout(() => this.connect(), delay)
   }
@@ -395,6 +429,32 @@ class WebSocketService {
       queueSize: this.messageQueue.length,
       lastHeartbeatTime: this.lastHeartbeatTime,
     }
+  }
+
+  // ========== 事件接口 ==========
+
+  on(event, callback) {
+    return eventBus.on(event, callback)
+  }
+
+  off(event, callback) {
+    eventBus.off(event, callback)
+  }
+
+  once(event, callback) {
+    return eventBus.once(event, callback)
+  }
+
+  addEventListener(event, callback) {
+    return this.on(event, callback)
+  }
+
+  removeEventListener(event, callback) {
+    this.off(event, callback)
+  }
+
+  emit(event, data) {
+    eventBus.emit(event, data)
   }
 }
 

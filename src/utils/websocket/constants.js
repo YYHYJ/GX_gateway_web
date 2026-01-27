@@ -49,7 +49,7 @@ export const WSStatusCode = {
 export const ReconnectConfig = {
   MAX_ATTEMPTS: 10,
   BASE_INTERVAL: 1000,
-  MAX_INTERVAL: 10000,
+  MAX_INTERVAL: 1000,
   BACKOFF_MULTIPLIER: 1.5,
 }
 

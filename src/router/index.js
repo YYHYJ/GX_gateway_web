@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 
 const routes = [
   {
@@ -101,9 +101,18 @@ const routes = [
 ]
 
 const router = createRouter({
-  // 使用HTML5 History模式
-  history: createWebHistory(import.meta.env.BASE_URL),
+  // 将 createWebHistory 改为 createWebHashHistory
+  history: createWebHashHistory(), // 修改这行
+
   routes,
+  // 可选：添加滚动行为
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    } else {
+      return { top: 0 }
+    }
+  },
 })
 
 // 路由守卫：检查是否登录

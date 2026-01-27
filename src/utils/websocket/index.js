@@ -18,9 +18,9 @@ export * from './constants.js'
  * WebSocket Hook（Vue 3 Composition API）
  * 提供便捷的WebSocket使用方式
  */
-import { ref, onUnmounted } from 'vue'
+import { ref, onUnmounted, watch } from 'vue'
 import { wsService } from './WebSocketService.js'
-import { MessageType } from './constants.js'
+import { MessageType, WSEvent } from './constants.js'
 
 /**
  * 使用WebSocket服务
@@ -41,6 +41,7 @@ export function useWebSocket(options = {}) {
   const lastMessage = ref(null)
   const error = ref(null)
   const unsubscribeFn = ref(null)
+  const eventUnsubscribers = ref([])
 
   // 连接状态监听
   const updateConnectionStatus = () => {
@@ -49,6 +50,7 @@ export function useWebSocket(options = {}) {
 
   // 消息处理
   const handleMessage = (data) => {
+    console.log(`[useWebSocket] 收到消息:`, data)
     lastMessage.value = data
     if (onMessage && typeof onMessage === 'function') {
       onMessage(data)
@@ -57,6 +59,7 @@ export function useWebSocket(options = {}) {
 
   // 连接事件处理
   const handleConnected = (event) => {
+    console.log('[useWebSocket] 连接成功')
     updateConnectionStatus()
     if (onConnected && typeof onConnected === 'function') {
       onConnected(event)
@@ -65,6 +68,7 @@ export function useWebSocket(options = {}) {
 
   // 断开连接事件处理
   const handleDisconnected = (event) => {
+    console.log('[useWebSocket] 连接断开')
     updateConnectionStatus()
     if (onDisconnected && typeof onDisconnected === 'function') {
       onDisconnected(event)
@@ -73,6 +77,7 @@ export function useWebSocket(options = {}) {
 
   // 错误处理
   const handleError = (err) => {
+    console.log('[useWebSocket] 发生错误:', err)
     error.value = err
     if (onError && typeof onError === 'function') {
       onError(err)
@@ -82,21 +87,35 @@ export function useWebSocket(options = {}) {
   // 订阅设备数据
   const subscribe = (id = deviceId) => {
     if (!id) {
-      console.error('设备ID不能为空')
+      console.error('[useWebSocket] 设备ID不能为空')
       return null
     }
 
+    console.log(`[useWebSocket] 订阅设备: ${id}`, {
+      当前连接状态: wsService.isConnected,
+    })
+
     if (unsubscribeFn.value) {
       unsubscribeFn.value()
+      unsubscribeFn.value = null
     }
 
-    unsubscribeFn.value = wsService.subscribe(id, handleMessage)
+    // 创建新的回调函数
+    const messageCallback = (data) => {
+      console.log(`[useWebSocket] 执行设备 ${id} 的回调:`, data)
+      handleMessage(data)
+    }
+
+    unsubscribeFn.value = wsService.subscribe(id, messageCallback)
+
+    console.log(`[useWebSocket] ✅ 订阅完成，返回清理函数`)
     return unsubscribeFn.value
   }
 
   // 取消订阅
   const unsubscribe = () => {
     if (unsubscribeFn.value) {
+      console.log('[useWebSocket] 取消订阅')
       unsubscribeFn.value()
       unsubscribeFn.value = null
     }
@@ -104,7 +123,9 @@ export function useWebSocket(options = {}) {
 
   // 发送消息
   const send = (message) => {
-    return wsService.send(message)
+    const result = wsService.send(message)
+    console.log(`[useWebSocket] 发送消息:`, message, result ? '✅ 成功' : '❌ 失败')
+    return result
   }
 
   // 发送心跳
@@ -135,16 +156,19 @@ export function useWebSocket(options = {}) {
 
   // 手动连接
   const connect = () => {
+    console.log('[useWebSocket] 手动连接')
     wsService.connect()
   }
 
   // 手动断开
   const disconnect = () => {
+    console.log('[useWebSocket] 手动断开')
     wsService.disconnect()
   }
 
   // 重新连接
   const reconnect = () => {
+    console.log('[useWebSocket] 重新连接')
     wsService.reconnect()
   }
 
@@ -153,34 +177,84 @@ export function useWebSocket(options = {}) {
     return wsService.getStatus()
   }
 
+  // 初始化事件监听
+  const initEventListeners = () => {
+    // 清理旧的事件监听
+    cleanupEventListeners()
+
+    // 监听连接状态变化
+    const connectedUnsubscribe = wsService.on(WSEvent.CONNECTED, handleConnected)
+    const disconnectedUnsubscribe = wsService.on(WSEvent.DISCONNECTED, handleDisconnected)
+    const errorUnsubscribe = wsService.on(WSEvent.ERROR, handleError)
+
+    eventUnsubscribers.value = [connectedUnsubscribe, disconnectedUnsubscribe, errorUnsubscribe]
+
+    console.log('[useWebSocket] 事件监听已设置')
+  }
+
+  // 清理事件监听
+  const cleanupEventListeners = () => {
+    eventUnsubscribers.value.forEach((unsubscribe) => unsubscribe())
+    eventUnsubscribers.value = []
+  }
+
   // 初始化
   const init = () => {
-    // 监听连接事件
-    wsService.on('ws:connected', handleConnected)
-    wsService.on('ws:disconnected', handleDisconnected)
-    wsService.on('ws:error', handleError)
+    console.log('[useWebSocket] 初始化', { deviceId, autoSubscribe })
 
-    // 自动订阅
-    if (autoSubscribe && deviceId) {
-      subscribe(deviceId)
-    }
+    // 设置事件监听
+    initEventListeners()
 
+    // 更新连接状态
     updateConnectionStatus()
+
+    // 自动订阅逻辑
+    if (autoSubscribe && deviceId) {
+      if (wsService.isConnected) {
+        // 如果已连接，等待一小段时间后订阅（确保认证完成）
+        setTimeout(() => {
+          subscribe(deviceId)
+        }, 500)
+      } else {
+        // 如果未连接，监听连接事件，连接成功后再订阅
+        const unsubscribe = wsService.on(WSEvent.CONNECTED, () => {
+          console.log(`[useWebSocket] 连接成功，现在订阅设备: ${deviceId}`)
+          setTimeout(() => {
+            subscribe(deviceId)
+            unsubscribe() // 只执行一次
+          }, 500)
+        })
+        eventUnsubscribers.value.push(unsubscribe)
+      }
+    }
   }
 
   // 清理
   const cleanup = () => {
+    console.log('[useWebSocket] 清理')
     unsubscribe()
-    wsService.off('ws:connected', handleConnected)
-    wsService.off('ws:disconnected', handleDisconnected)
-    wsService.off('ws:error', handleError)
+    cleanupEventListeners()
   }
+
+  // 监听连接状态变化，自动处理订阅
+  watch(isConnected, (newVal) => {
+    console.log(`[useWebSocket] 连接状态变化: ${newVal}`)
+    if (newVal && autoSubscribe && deviceId) {
+      // 连接成功时自动订阅
+      setTimeout(() => {
+        subscribe(deviceId)
+      }, 500)
+    }
+  })
 
   // 初始化
   init()
 
   // 组件卸载时自动清理
-  onUnmounted(cleanup)
+  onUnmounted(() => {
+    console.log('[useWebSocket] 组件卸载，执行清理')
+    cleanup()
+  })
 
   return {
     // 状态
@@ -210,23 +284,25 @@ export function useWebSocket(options = {}) {
  * 专门用于设备数据监控
  */
 export function useDeviceMonitor(deviceId) {
-  const { isConnected, lastMessage, error, ...wsMethods } = useWebSocket({
-    deviceId,
-    autoSubscribe: true,
-  })
-
   const deviceData = ref(null)
   const points = ref([])
   const lastUpdate = ref(null)
 
-  // 处理设备数据
+  // 自定义消息处理器
   const handleDeviceMessage = (data) => {
     if (data.device_id === String(deviceId)) {
+      console.log(`[useDeviceMonitor] 收到设备 ${deviceId} 数据`)
       deviceData.value = data
       points.value = data.points || []
       lastUpdate.value = new Date().toISOString()
     }
   }
+
+  const { isConnected, lastMessage, error, ...wsMethods } = useWebSocket({
+    deviceId,
+    autoSubscribe: true,
+    onMessage: handleDeviceMessage,
+  })
 
   // 获取数据点
   const getPoint = (pointCode) => {

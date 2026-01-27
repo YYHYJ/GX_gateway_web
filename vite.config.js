@@ -9,6 +9,7 @@ import vue from '@vitejs/plugin-vue'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: './', // 重要：添加这行
   plugins: [vue()],
 
   // 开发服务器配置
@@ -39,46 +40,10 @@ export default defineConfig({
     },
   },
 
-  // 生产环境打包配置
   build: {
-    outDir: 'dist', // 打包输出目录
-    assetsDir: 'assets', // 静态资源目录
-    sourcemap: false, // 不生成sourceMap（减小体积）
-    minify: false, // 代码压缩
-
-    // 资源大小警告阈值
-    chunkSizeWarningLimit: 1000,
-
-    // 打包优化配置
-    rollupOptions: {
-      output: {
-        // 分割chunk
-        chunkFileNames: 'assets/js/[name]-[hash].js',
-        entryFileNames: 'assets/js/[name]-[hash].js',
-        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
-
-        // 手动分割chunk
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.includes('vue')) {
-              return 'vue'
-            }
-            if (id.includes('axios')) {
-              return 'axios'
-            }
-            return 'vendor' // 其他依赖
-          }
-        },
-      },
-    },
-
-    // 代码压缩配置
-    terserOptions: {
-      compress: {
-        drop_console: true, // 生产环境移除console
-        drop_debugger: true, // 移除debugger
-      },
-    },
+    outDir: 'dist',
+    // 确保 assetsDir 配置正确
+    assetsDir: 'assets',
   },
 
   // 路径别名配置
