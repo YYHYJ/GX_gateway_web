@@ -1081,7 +1081,7 @@ export default {
       try {
         const requestData = {
           model_id: Number(this.templateId),
-          size: 10000,
+          size: 100,
           current: 1,
           start_address: 0,
         }

@@ -58,6 +58,8 @@ import {
 const ProtocolComponents = {
   ModbusTCP: () => import('../components/protocol/ModbusProtocol.vue'),
   'Modbus RTU': () => import('../components/protocol/ModbusProtocol.vue'),
+  // CAN 协议使用独立组件
+  CAN: () => import('../components/protocol/CANProtocol.vue'),
 }
 
 // 默认协议组件（保持不变）
@@ -284,7 +286,7 @@ export default {
         // 暂时使用模拟数据
         this.templateData = {
           id: this.templateId,
-          model_name: '智能温控器-T1000',
+          model_name: 'model_name',
           manufacturer: '示例厂商',
           protocol_type: this.protocolType,
         }

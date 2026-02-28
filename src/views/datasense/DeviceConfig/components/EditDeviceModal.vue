@@ -137,7 +137,7 @@
               <h4 class="config-title">{{ formData.protocol_type.name }} 配置</h4>
               <div class="config-content">
                 <!-- Modbus TCP 配置 -->
-                <div v-if="formData.protocol_type.name === 'ModbusTCP'" class="config-fields">
+                <div v-if="formData.protocol_type.name === 'ModbusTCP'" class="config-fields" key="modbus-tcp">
                   <div class="config-row">
                     <div class="form-group">
                       <label class="form-label">IP地址 <span class="required">*</span></label>
@@ -214,23 +214,287 @@
                     </div>
                   </div>
                 </div>
-
-                <!-- 其他协议配置 -->
-                <div v-else class="other-protocol-config">
-                  <div class="json-header">
-                    <span>配置详情</span>
-                    <button type="button" class="json-toggle" @click="toggleJsonView">
-                      {{ showRawJson ? '表格视图' : 'JSON视图' }}
-                    </button>
+                <!-- Modbus RTU 配置 -->
+                <div v-else-if="formData.protocol_type.name === 'ModbusRTU'" class="config-fields" key="modbus-rtu">
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">串口 <span class="required">*</span></label>
+                      <input
+                        v-model="formData.protocol_type.config.serial_port"
+                        type="text"
+                        class="form-input"
+                        :class="{ 'is-invalid': protocolErrors.serial_port }"
+                        placeholder="COM1"
+                        :disabled="loading"
+                        @input="clearProtocolError('serial_port')"
+                        required
+                      />
+                      <div v-if="protocolErrors.serial_port" class="form-error">
+                        {{ protocolErrors.serial_port }}
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">波特率 <span class="required">*</span></label>
+                      <input
+                        v-model.number="formData.protocol_type.config.baud_rate"
+                        type="number"
+                        class="form-input"
+                        :class="{ 'is-invalid': protocolErrors.baud_rate }"
+                        placeholder="9600"
+                        :disabled="loading"
+                        min="1"
+                        @input="clearProtocolError('baud_rate')"
+                        required
+                      />
+                      <div v-if="protocolErrors.baud_rate" class="form-error">
+                        {{ protocolErrors.baud_rate }}
+                      </div>
+                    </div>
                   </div>
-
-                  <!-- JSON视图 -->
-                  <div v-if="showRawJson" class="json-view">
-                    <pre>{{ formatJson(formData.protocol_type.config) }}</pre>
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">数据位 <span class="required">*</span></label>
+                      <input
+                        v-model.number="formData.protocol_type.config.data_bits"
+                        type="number"
+                        class="form-input"
+                        :class="{ 'is-invalid': protocolErrors.data_bits }"
+                        placeholder="8"
+                        :disabled="loading"
+                        min="5"
+                        max="8"
+                        @input="clearProtocolError('data_bits')"
+                        required
+                      />
+                      <div v-if="protocolErrors.data_bits" class="form-error">
+                        {{ protocolErrors.data_bits }}
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">停止位 <span class="required">*</span></label>
+                      <input
+                        v-model.number="formData.protocol_type.config.stop_bits"
+                        type="number"
+                        class="form-input"
+                        :class="{ 'is-invalid': protocolErrors.stop_bits }"
+                        placeholder="1"
+                        :disabled="loading"
+                        min="1"
+                        max="2"
+                        @input="clearProtocolError('stop_bits')"
+                        required
+                      />
+                      <div v-if="protocolErrors.stop_bits" class="form-error">
+                        {{ protocolErrors.stop_bits }}
+                      </div>
+                    </div>
                   </div>
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">校验 <span class="required">*</span></label>
+                      <select
+                        v-model="formData.protocol_type.config.parity"
+                        class="form-select"
+                        :class="{ 'is-invalid': protocolErrors.parity }"
+                        :disabled="loading"
+                        @change="clearProtocolError('parity')"
+                        required
+                      >
+                        <option value="">请选择</option>
+                        <option value="None">无</option>
+                        <option value="Even">偶校验</option>
+                        <option value="Odd">奇校验</option>
+                      </select>
+                      <div v-if="protocolErrors.parity" class="form-error">
+                        {{ protocolErrors.parity }}
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">从站ID <span class="required">*</span></label>
+                      <input
+                        v-model.number="formData.protocol_type.config.slave_id"
+                        type="number"
+                        class="form-input"
+                        :class="{ 'is-invalid': protocolErrors.slave_id }"
+                        placeholder="1"
+                        :disabled="loading"
+                        min="1"
+                        max="247"
+                        @input="clearProtocolError('slave_id')"
+                        required
+                      />
+                      <div v-if="protocolErrors.slave_id" class="form-error">
+                        {{ protocolErrors.slave_id }}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">超时(ms) <span class="required">*</span></label>
+                      <input
+                        v-model.number="formData.protocol_type.config.timeout"
+                        type="number"
+                        class="form-input"
+                        :class="{ 'is-invalid': protocolErrors.timeout }"
+                        placeholder="1000"
+                        :disabled="loading"
+                        min="100"
+                        max="10000"
+                        step="100"
+                        @input="clearProtocolError('timeout')"
+                        required
+                      />
+                      <div v-if="protocolErrors.timeout" class="form-error">
+                        {{ protocolErrors.timeout }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-                  <!-- 表格视图 -->
-                  <div v-else class="table-view">
+                <!-- CAN 协议配置 -->
+                <div v-else-if="formData.protocol_type.name === 'CAN'" class="config-fields" key="can">
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">接口名 <span class="required">*</span></label>
+                      <input
+                        v-model="formData.protocol_type.config.interface_name"
+                        type="text"
+                        class="form-input"
+                        :class="{ 'is-invalid': protocolErrors.interface_name }"
+                        placeholder="can0"
+                        :disabled="loading"
+                        @input="clearProtocolError('interface_name')"
+                        required
+                      />
+                      <div v-if="protocolErrors.interface_name" class="form-error">
+                        {{ protocolErrors.interface_name }}
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">网关自身 <span class="required">*</span></label>
+                      <label class="checkbox-label">
+                        <input
+                          type="checkbox"
+                          v-model="formData.protocol_type.config.is_gateway_self"
+                          :disabled="loading"
+                        />
+                        <span class="checkbox-text">是</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">节点类型</label>
+                      <input
+                        v-model.number="formData.protocol_type.config.node_category"
+                        type="number"
+                        class="form-input"
+                        :disabled="loading"
+                        min="0"
+                        @input="clearProtocolError('node_category')"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">CAN ID <span class="required">*</span></label>
+                      <input
+                        v-model.number="formData.protocol_type.config.can_id"
+                        type="number"
+                        class="form-input"
+                        :class="{ 'is-invalid': protocolErrors.can_id }"
+                        :disabled="loading"
+                        min="0"
+                        max="536870911"
+                        @input="clearProtocolError('can_id')"
+                        required
+                      />
+                      <div v-if="protocolErrors.can_id" class="form-error">
+                        {{ protocolErrors.can_id }}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">ID 类型 <span class="required">*</span></label>
+                      <select
+                        v-model.number="formData.protocol_type.config.can_id_type"
+                        class="form-select"
+                        :class="{ 'is-invalid': protocolErrors.can_id_type }"
+                        :disabled="loading"
+                        @change="clearProtocolError('can_id_type')"
+                        required
+                      >
+                        <option :value="0">标准</option>
+                        <option :value="1">扩展</option>
+                      </select>
+                      <div v-if="protocolErrors.can_id_type" class="form-error">
+                        {{ protocolErrors.can_id_type }}
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">过滤掩码</label>
+                      <input
+                        v-model.number="formData.protocol_type.config.filter_mask"
+                        type="number"
+                        class="form-input"
+                        :class="{ 'is-invalid': protocolErrors.filter_mask }"
+                        :disabled="loading"
+                        min="0"
+                        max="536870911"
+                        @input="clearProtocolError('filter_mask')"
+                      />
+                      <div v-if="protocolErrors.filter_mask" class="form-error">
+                        {{ protocolErrors.filter_mask }}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">数据超时(ms) <span class="required">*</span></label>
+                      <input
+                        v-model.number="formData.protocol_type.config.data_timeout_ms"
+                        type="number"
+                        class="form-input"
+                        :class="{ 'is-invalid': protocolErrors.data_timeout_ms }"
+                        :disabled="loading"
+                        min="0"
+                        @input="clearProtocolError('data_timeout_ms')"
+                        required
+                      />
+                      <div v-if="protocolErrors.data_timeout_ms" class="form-error">
+                        {{ protocolErrors.data_timeout_ms }}
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">发送间隔(ms)</label>
+                      <input
+                        v-model.number="formData.protocol_type.config.send_interval_ms"
+                        type="number"
+                        class="form-input"
+                        :disabled="loading"
+                        min="0"
+                        @input="clearProtocolError('send_interval_ms')"
+                      />
+                    </div>
+                  </div>
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">轮询间隔(ms)</label>
+                      <input
+                        v-model.number="formData.protocol_type.config.poll_interval_ms"
+                        type="number"
+                        class="form-input"
+                        :disabled="loading"
+                        min="0"
+                        @input="clearProtocolError('poll_interval_ms')"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 其他协议配置：仅表格视图（仅当非 ModbusTCP/ModbusRTU/CAN 时显示，避免配置项显示两遍） -->
+                <div v-else class="other-protocol-config" key="other">
+                  <div class="config-detail-title">配置详情</div>
+                  <div class="table-view">
                     <div class="config-table">
                       <div class="table-header">
                         <div class="table-cell">配置项</div>
@@ -372,7 +636,6 @@ export default {
       formData: this.getInitialFormData(),
       errors: {},
       protocolErrors: {},
-      showRawJson: false,
       deviceCodeValidation: {
         length: false,
         startWithLetter: false,
@@ -455,7 +718,6 @@ export default {
       this.errorMessage = ''
       this.errors = {}
       this.protocolErrors = {}
-      this.showRawJson = false
       this.deviceCodeValid = false
       this.deviceCodeValidation = {
         length: false,
@@ -466,13 +728,12 @@ export default {
       this.showValidationRules = false
     },
 
-    // 加载设备信息（从设备列表中找到对应的设备）
-    loadDeviceInfo() {
+    // 加载设备信息：优先用列表中的 rawData（含数据库中的 protocol_type.config），无则请求详情接口
+    async loadDeviceInfo() {
       this.loadingDevice = true
       this.deviceNotFound = false
 
       try {
-        // 从设备列表中查找
         const device = this.deviceList.find(
           (item) => item.id == this.deviceId || item.id.toString() === this.deviceId.toString(),
         )
@@ -483,33 +744,67 @@ export default {
           return
         }
 
-        // 保存原始数据供参考
-        this.deviceData = { ...device }
+        // 优先使用接口返回的完整数据：rawData 为 getDeviceInstances 接口的原始设备对象，含 protocol_type.config
+        let source = device.rawData || device
+        const hasConfigFromList =
+          source.protocol_type && source.protocol_type.config && Object.keys(source.protocol_type.config).length > 0
 
-        // 设置表单数据
+        // 若列表中无完整配置（例如旧数据或接口未返回 config），则请求详情接口从数据库拉取
+        if (!hasConfigFromList) {
+          const res = await deviceService.getDeviceDetail(this.deviceId)
+          if (res && res.code === 200 && res.data) {
+            source = deviceService.processDeviceData(res.data)
+          }
+        }
+
+        this.deviceData = { ...source }
+
+        // 基于数据库中的原始数据设置表单，避免配置项变成默认值
+        const pt = source.protocol_type || {}
+        const config = pt.config && typeof pt.config === 'object' ? { ...pt.config } : {}
+
         this.formData = {
-          id: device.id,
-          device_name: device.device_name || device.name || '',
-          device_code: device.device_code || device.code || '',
-          model_id: Number(device.model_id) || 0,
-          scan_interval: device.scan_interval || device.interval || 1000,
-          is_enabled: device.is_enabled !== false,
-          is_controlled: device.is_controlled || false,
-          protocol_type: device.protocol_type || {
-            name: device.protocolDisplay || device.protocol || '',
-            config: {},
+          id: source.id,
+          device_name: source.device_name || device.name || '',
+          device_code: source.device_code || device.code || '',
+          model_id: Number(source.model_id || device.model_id) || 0,
+          scan_interval: source.scan_interval ?? device.interval ?? 1000,
+          is_enabled: source.is_enabled !== false,
+          is_controlled: !!source.is_controlled,
+          protocol_type: {
+            name: pt.name || device.protocolDisplay || device.protocol || '',
+            config,
           },
         }
 
-        // 确保protocol_type.config存在
-        if (!this.formData.protocol_type.config) {
+        if (!this.formData.protocol_type.config || typeof this.formData.protocol_type.config !== 'object') {
           this.formData.protocol_type.config = {}
         }
+        const cfg = this.formData.protocol_type.config
 
-        // 验证设备代码
+        // 仅对缺失字段补默认值，保留从数据库取到的值
+        if (this.formData.protocol_type.name === 'ModbusRTU') {
+          cfg.serial_port = cfg.serial_port ?? ''
+          cfg.baud_rate = cfg.baud_rate ?? 9600
+          cfg.data_bits = cfg.data_bits ?? 8
+          cfg.stop_bits = cfg.stop_bits ?? 1
+          cfg.parity = cfg.parity ?? 'None'
+          cfg.slave_id = cfg.slave_id ?? 1
+          cfg.timeout = cfg.timeout ?? 1000
+        }
+        if (this.formData.protocol_type.name === 'CAN') {
+          cfg.interface_name = cfg.interface_name ?? 'can0'
+          cfg.is_gateway_self = cfg.is_gateway_self ?? false
+          cfg.node_category = cfg.node_category ?? 0
+          cfg.can_id = cfg.can_id ?? 0
+          cfg.can_id_type = cfg.can_id_type ?? 0
+          cfg.filter_mask = cfg.filter_mask ?? 0x7ff
+          cfg.data_timeout_ms = cfg.data_timeout_ms ?? 5000
+          cfg.send_interval_ms = cfg.send_interval_ms ?? 0
+          cfg.poll_interval_ms = cfg.poll_interval_ms ?? 1000
+        }
+
         this.validateDeviceCode()
-
-        console.log('加载的设备数据:', this.formData)
       } catch (error) {
         console.error('加载设备信息失败:', error)
         this.errorMessage = '加载设备信息失败: ' + error.message
@@ -646,17 +941,78 @@ export default {
         }
       }
 
+      // ModbusRTU 验证
+      if (protocolName === 'ModbusRTU') {
+        if (!config.serial_port || !config.serial_port.trim()) {
+          this.protocolErrors.serial_port = '串口不能为空'
+          isValid = false
+        }
+
+        if (!config.baud_rate || config.baud_rate <= 0) {
+          this.protocolErrors.baud_rate = '波特率必须为正数'
+          isValid = false
+        }
+
+        if (!config.data_bits || config.data_bits < 5 || config.data_bits > 8) {
+          this.protocolErrors.data_bits = '数据位必须在5-8之间'
+          isValid = false
+        }
+
+        if (!config.stop_bits || config.stop_bits < 1 || config.stop_bits > 2) {
+          this.protocolErrors.stop_bits = '停止位必须为1或2'
+          isValid = false
+        }
+
+        if (!config.parity) {
+          this.protocolErrors.parity = '请选择校验方式'
+          isValid = false
+        }
+
+        if (!config.slave_id || config.slave_id < 1 || config.slave_id > 247) {
+          this.protocolErrors.slave_id = '从站ID必须在1-247之间'
+          isValid = false
+        }
+
+        if (!config.timeout || config.timeout < 100 || config.timeout > 10000) {
+          this.protocolErrors.timeout = '超时时间必须在100-10000ms之间'
+          isValid = false
+        }
+      }
+
+      // CAN 验证
+      if (protocolName === 'CAN') {
+        if (!config.interface_name || !config.interface_name.trim()) {
+          this.protocolErrors.interface_name = '接口名不能为空'
+          isValid = false
+        }
+        if (config.can_id === undefined || config.can_id === null || config.can_id < 0 || config.can_id > 0x1fffffff) {
+          this.protocolErrors.can_id = 'CAN ID 必须在0到0x1FFFFFFF之间'
+          isValid = false
+        }
+        if (config.can_id_type !== 0 && config.can_id_type !== 1) {
+          this.protocolErrors.can_id_type = '请选择有效的ID类型'
+          isValid = false
+        }
+        if (config.filter_mask < 0 || config.filter_mask > 0x1fffffff) {
+          this.protocolErrors.filter_mask = '过滤掩码必须在0到0x1FFFFFFF之间'
+          isValid = false
+        }
+        if (config.data_timeout_ms === undefined || config.data_timeout_ms === null || config.data_timeout_ms < 0) {
+          this.protocolErrors.data_timeout_ms = '数据超时不能为空且不能为负'
+          isValid = false
+        }
+        if (config.send_interval_ms < 0) {
+          this.protocolErrors.send_interval_ms = '发送间隔不能为负'
+          isValid = false
+        }
+        if (config.poll_interval_ms < 0) {
+          this.protocolErrors.poll_interval_ms = '轮询间隔不能为负'
+          isValid = false
+        }
+        // node_category、is_gateway_self 无需严格校验
+      }
+
       return isValid
-    },
-
-    // 切换JSON视图
-    toggleJsonView() {
-      this.showRawJson = !this.showRawJson
-    },
-
-    // 格式化JSON显示
-    formatJson(obj) {
-      return JSON.stringify(obj, null, 2)
     },
 
     // 格式化配置键名
@@ -732,13 +1088,37 @@ export default {
           protocol_type: this.formData.protocol_type,
         }
 
-        // 如果是ModbusTCP，需要确保配置项存在
+        // 若是特定协议需要确保配置项存在
         if (this.formData.protocol_type.name === 'ModbusTCP') {
           submitData.protocol_type.config = {
             ip_address: this.formData.protocol_type.config.ip_address || '',
             port: this.formData.protocol_type.config.port || 502,
             slave_id: this.formData.protocol_type.config.slave_id || 1,
             timeout: this.formData.protocol_type.config.timeout || 1000,
+          }
+        }
+        if (this.formData.protocol_type.name === 'ModbusRTU') {
+          submitData.protocol_type.config = {
+            serial_port: this.formData.protocol_type.config.serial_port || '',
+            baud_rate: this.formData.protocol_type.config.baud_rate || 9600,
+            data_bits: this.formData.protocol_type.config.data_bits || 8,
+            stop_bits: this.formData.protocol_type.config.stop_bits || 1,
+            parity: this.formData.protocol_type.config.parity || 'None',
+            slave_id: this.formData.protocol_type.config.slave_id || 1,
+            timeout: this.formData.protocol_type.config.timeout || 1000,
+          }
+        }
+        if (this.formData.protocol_type.name === 'CAN') {
+          submitData.protocol_type.config = {
+            interface_name: this.formData.protocol_type.config.interface_name || 'can0',
+            is_gateway_self: !!this.formData.protocol_type.config.is_gateway_self,
+            node_category: this.formData.protocol_type.config.node_category || 0,
+            can_id: this.formData.protocol_type.config.can_id || 0,
+            can_id_type: this.formData.protocol_type.config.can_id_type || 0,
+            filter_mask: this.formData.protocol_type.config.filter_mask || 0x7ff,
+            data_timeout_ms: this.formData.protocol_type.config.data_timeout_ms || 5000,
+            send_interval_ms: this.formData.protocol_type.config.send_interval_ms || 0,
+            poll_interval_ms: this.formData.protocol_type.config.poll_interval_ms || 1000,
           }
         }
 
@@ -748,6 +1128,7 @@ export default {
 
         if (response.code === 200) {
           this.$emit('updated', response.data)
+          this.loading = false
           this.handleClose()
         } else {
           throw new Error(response.message || '更新设备失败')
@@ -1126,45 +1507,11 @@ export default {
   gap: 12px;
 }
 
-.json-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.config-detail-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
   margin-bottom: 8px;
-}
-
-.json-toggle {
-  background: none;
-  border: 1px solid #ced4da;
-  color: #495057;
-  padding: 4px 12px;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.json-toggle:hover {
-  background-color: #f8f9fa;
-  border-color: #adb5bd;
-}
-
-.json-view {
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  padding: 12px;
-  max-height: 200px;
-  overflow-y: auto;
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.json-view pre {
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-all;
 }
 
 .table-view {

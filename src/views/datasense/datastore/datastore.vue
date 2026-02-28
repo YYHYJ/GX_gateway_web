@@ -318,275 +318,265 @@
   </MainLayout>
 </template>
 
-<script>
+<script setup>
+import { ref, reactive, computed, onMounted } from 'vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import request from '@/utils/request'
 
-export default {
-  name: 'DataStoreConfig',
-  components: {
-    MainLayout,
-    PageHeader,
+// 响应式数据
+const breadcrumbs = [
+  { title: '数据采集', link: '/data' },
+  { title: '数据存储', link: '/data/datastore' },
+]
+
+// 配置数据
+const influxdbConfig = reactive({
+  host: '',
+  port: 8086,
+  org: '',
+  bucket: '',
+  precision: 'ms',
+  has_token: false,
+})
+
+const networkConfig = reactive({
+  timeout: 10,
+  retry_count: 3,
+})
+
+const loggingConfig = reactive({
+  level: 'INFO',
+  file: '',
+})
+
+const strategyConfig = reactive({
+  tier1: {
+    enabled: false,
+    strategy: '1s_raw',
+    name: '原始数据',
+    time_range: '第1天 - 第3天',
   },
-  data() {
-    return {
-      breadcrumbs: [
-        { title: '数据采集', link: '/data' },
-        { title: '数据存储', link: '/data/datastore' },
-      ],
-      influxdbUI: {
-        username: 'admin',
-        password: 'admin123',
-        path: '/',
-      },
-      // 从后端加载的配置数据
-      influxdbConfig: {
-        host: '',
-        port: 8086,
-        org: '',
-        bucket: '',
-        precision: 'ms',
-        has_token: false,
-      },
-      networkConfig: {
-        timeout: 10,
-        retry_count: 3,
-      },
-      loggingConfig: {
-        level: 'INFO',
-        file: '',
-      },
-      strategyConfig: {
+  tier2: {
+    enabled: false,
+    strategy: '5s_avg',
+    name: '降采样数据',
+    time_range: '第1天 - 第7天',
+  },
+  tier3: {
+    enabled: false,
+    strategy: '1m_avg',
+    name: '聚合数据',
+    time_range: '第1天 - 第30天',
+  },
+  note: '超过30天的数据自动删除',
+})
+
+// 状态数据
+const isLoading = ref(true)
+const loadError = ref(null)
+const isSaving = ref(false)
+
+// 存储策略选项（前端固定）
+const storageOptions = {
+  tier1: [
+    {
+      value: '1s_raw',
+      label: '1秒原始数据',
+      desc: '存储所有原始数据点',
+    },
+    {
+      value: '2s_raw',
+      label: '2秒原始数据',
+      desc: '原始数据，降低采样频率',
+    },
+  ],
+  tier2: [
+    {
+      value: '5s_avg',
+      label: '5秒平均值',
+      desc: '5秒间隔自动计算平均值',
+    },
+    {
+      value: '10s_avg',
+      label: '10秒平均值',
+      desc: '10秒间隔自动计算平均值',
+    },
+    {
+      value: '30s_avg',
+      label: '30秒平均值',
+      desc: '30秒间隔自动计算平均值',
+    },
+  ],
+  tier3: [
+    {
+      value: '1m_avg',
+      label: '1分钟平均值',
+      desc: '1分钟间隔自动计算平均值',
+    },
+    {
+      value: '5m_avg',
+      label: '5分钟平均值',
+      desc: '5分钟间隔自动计算平均值',
+    },
+    {
+      value: '15m_avg',
+      label: '15分钟平均值',
+      desc: '15分钟间隔自动计算平均值',
+    },
+  ],
+}
+
+// 计算属性
+const influxDBUIUrl = computed(() => {
+  if (!influxdbConfig.host || !influxdbConfig.port) {
+    return ''
+  }
+  return `http://${influxdbConfig.host}:${influxdbConfig.port}`
+})
+
+// 方法
+const handleNavigation = (nav) => {
+  console.log('导航变化:', nav)
+}
+
+const loadConfigFromBackend = async () => {
+  isLoading.value = true
+  loadError.value = null
+
+  try {
+    const response = await request({
+      url: '/api/influxdb/config',
+      method: 'GET',
+    })
+
+    const result = response.data
+
+    if (result.influxdb) {
+      Object.assign(influxdbConfig, {
+        host: result.influxdb.host || '',
+        port: result.influxdb.port || 8086,
+        org: result.influxdb.org || '',
+        bucket: result.influxdb.bucket || '',
+        precision: result.influxdb.precision || 'ms',
+        has_token: result.influxdb.has_token || false,
+      })
+    }
+
+    if (result.network) {
+      Object.assign(networkConfig, {
+        timeout: result.network.timeout || 10,
+        retry_count: result.network.retry_count || 3,
+      })
+    }
+
+    if (result.logging) {
+      Object.assign(loggingConfig, {
+        level: result.logging.level || 'INFO',
+        file: result.logging.file || '',
+      })
+    }
+
+    if (result.strategy) {
+      if (result.strategy.tier1) {
+        Object.assign(strategyConfig.tier1, {
+          enabled: Boolean(result.strategy.tier1.enabled),
+          strategy: result.strategy.tier1.strategy || '',
+          name: result.strategy.tier1.name || '原始数据',
+          time_range: result.strategy.tier1.time_range || '第1天 - 第3天',
+        })
+      }
+
+      if (result.strategy.tier2) {
+        Object.assign(strategyConfig.tier2, {
+          enabled: Boolean(result.strategy.tier2.enabled),
+          strategy: result.strategy.tier2.strategy || '',
+          name: result.strategy.tier2.name || '降采样数据',
+          time_range: result.strategy.tier2.time_range || '第1天 - 第7天',
+        })
+      }
+
+      if (result.strategy.tier3) {
+        Object.assign(strategyConfig.tier3, {
+          enabled: Boolean(result.strategy.tier3.enabled),
+          strategy: result.strategy.tier3.strategy || '',
+          name: result.strategy.tier3.name || '聚合数据',
+          time_range: result.strategy.tier3.time_range || '第1天 - 第30天',
+        })
+      }
+
+      if (result.strategy.note) {
+        strategyConfig.note = result.strategy.note
+      }
+    }
+  } catch (error) {
+    console.error('加载配置失败:', error)
+    loadError.value = error.message || '加载配置失败'
+
+    if (!error.message.includes('网络连接失败')) {
+      alert('加载配置失败: ' + error.message)
+    }
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const openInfluxDBUI = () => {
+  if (!influxdbConfig.host || !influxdbConfig.port) {
+    alert('InfluxDB地址未配置，无法跳转')
+    return
+  }
+
+  const url = influxDBUIUrl.value
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+const saveConfig = async () => {
+  isSaving.value = true
+  try {
+    const requestData = {
+      strategy: {
         tier1: {
-          enabled: false,
-          strategy: '1s_raw',
-          name: '原始数据',
-          time_range: '第1天 - 第3天',
+          enabled: strategyConfig.tier1.enabled,
+          strategy: strategyConfig.tier1.strategy,
         },
         tier2: {
-          enabled: false,
-          strategy: '5s_avg',
-          name: '降采样数据',
-          time_range: '第1天 - 第7天',
+          enabled: strategyConfig.tier2.enabled,
+          strategy: strategyConfig.tier2.strategy,
         },
         tier3: {
-          enabled: false,
-          strategy: '1m_avg',
-          name: '聚合数据',
-          time_range: '第1天 - 第30天',
+          enabled: strategyConfig.tier3.enabled,
+          strategy: strategyConfig.tier3.strategy,
         },
-        note: '超过30天的数据自动删除',
       },
-
-      // 加载状态
-      isLoading: true,
-      loadError: null,
-
-      // 存储策略选项（前端固定）
-      storageOptions: {
-        tier1: [
-          {
-            value: '1s_raw',
-            label: '1秒原始数据',
-            desc: '存储所有原始数据点',
-          },
-          {
-            value: '2s_raw',
-            label: '2秒原始数据',
-            desc: '原始数据，降低采样频率',
-          },
-        ],
-        tier2: [
-          {
-            value: '5s_avg',
-            label: '5秒平均值',
-            desc: '5秒间隔自动计算平均值',
-          },
-          {
-            value: '10s_avg',
-            label: '10秒平均值',
-            desc: '10秒间隔自动计算平均值',
-          },
-          {
-            value: '30s_avg',
-            label: '30秒平均值',
-            desc: '30秒间隔自动计算平均值',
-          },
-        ],
-        tier3: [
-          {
-            value: '1m_avg',
-            label: '1分钟平均值',
-            desc: '1分钟间隔自动计算平均值',
-          },
-          {
-            value: '5m_avg',
-            label: '5分钟平均值',
-            desc: '5分钟间隔自动计算平均值',
-          },
-          {
-            value: '15m_avg',
-            label: '15分钟平均值',
-            desc: '15分钟间隔自动计算平均值',
-          },
-        ],
-      },
-
-      isSaving: false,
     }
-  },
-  computed: {
-    influxDBUIUrl() {
-      if (!this.influxdbConfig.host || !this.influxdbConfig.port) {
-        return ''
-      }
-      return `http://${this.influxdbConfig.host}:${this.influxdbConfig.port}`
-    },
-  },
-  methods: {
-    handleNavigation(nav) {
-      console.log('导航变化:', nav)
-    },
 
-    async loadConfigFromBackend() {
-      this.isLoading = true
-      this.loadError = null
+    await request({
+      url: '/api/influxdb/config',
+      method: 'PUT',
+      data: requestData,
+    })
 
-      try {
-        const response = await request({
-          url: '/api/influxdb/config',
-          method: 'GET',
-        })
-
-        const result = response.data
-
-        if (result.influxdb) {
-          this.influxdbConfig = {
-            host: result.influxdb.host || '',
-            port: result.influxdb.port || 8086,
-            org: result.influxdb.org || '',
-            bucket: result.influxdb.bucket || '',
-            precision: result.influxdb.precision || 'ms',
-            has_token: result.influxdb.has_token || false,
-          }
-        }
-
-        if (result.network) {
-          this.networkConfig = {
-            timeout: result.network.timeout || 10,
-            retry_count: result.network.retry_count || 3,
-          }
-        }
-
-        if (result.logging) {
-          this.loggingConfig = {
-            level: result.logging.level || 'INFO',
-            file: result.logging.file || '',
-          }
-        }
-
-        if (result.strategy) {
-          if (result.strategy.tier1) {
-            this.strategyConfig.tier1 = {
-              enabled: Boolean(result.strategy.tier1.enabled),
-              strategy: result.strategy.tier1.strategy || '',
-              name: result.strategy.tier1.name || '原始数据',
-              time_range: result.strategy.tier1.time_range || '第1天 - 第3天',
-            }
-          }
-
-          if (result.strategy.tier2) {
-            this.strategyConfig.tier2 = {
-              enabled: Boolean(result.strategy.tier2.enabled),
-              strategy: result.strategy.tier2.strategy || '',
-              name: result.strategy.tier2.name || '降采样数据',
-              time_range: result.strategy.tier2.time_range || '第1天 - 第7天',
-            }
-          }
-
-          if (result.strategy.tier3) {
-            this.strategyConfig.tier3 = {
-              enabled: Boolean(result.strategy.tier3.enabled),
-              strategy: result.strategy.tier3.strategy || '',
-              name: result.strategy.tier3.name || '聚合数据',
-              time_range: result.strategy.tier3.time_range || '第1天 - 第30天',
-            }
-          }
-
-          if (result.strategy.note) {
-            this.strategyConfig.note = result.strategy.note
-          }
-        }
-      } catch (error) {
-        console.error('加载配置失败:', error)
-        this.loadError = error.message || '加载配置失败'
-
-        if (!error.message.includes('网络连接失败')) {
-          alert('加载配置失败: ' + error.message)
-        }
-      } finally {
-        this.isLoading = false
-      }
-    },
-
-    openInfluxDBUI() {
-      if (!this.influxdbConfig.host || !this.influxdbConfig.port) {
-        this.$message.error('InfluxDB地址未配置，无法跳转')
-        return
-      }
-
-      const url = this.influxDBUIUrl
-      window.open(url, '_blank', 'noopener,noreferrer')
-    },
-
-    async saveConfig() {
-      this.isSaving = true
-      try {
-        const requestData = {
-          strategy: {
-            tier1: {
-              enabled: this.strategyConfig.tier1.enabled,
-              strategy: this.strategyConfig.tier1.strategy,
-            },
-            tier2: {
-              enabled: this.strategyConfig.tier2.enabled,
-              strategy: this.strategyConfig.tier2.strategy,
-            },
-            tier3: {
-              enabled: this.strategyConfig.tier3.enabled,
-              strategy: this.strategyConfig.tier3.strategy,
-            },
-          },
-        }
-
-        await request({
-          url: '/api/influxdb/config',
-          method: 'PUT',
-          data: requestData,
-        })
-
-        await this.loadConfigFromBackend()
-        alert('策略配置保存成功！')
-      } catch (error) {
-        console.error('保存配置失败:', error)
-        alert('保存配置失败: ' + (error.message || '请检查网络连接'))
-      } finally {
-        this.isSaving = false
-      }
-    },
-
-    resetToDefaults() {
-      if (confirm('确定要恢复到默认配置吗？')) {
-        this.loadConfigFromBackend()
-      }
-    },
-  },
-
-  mounted() {
-    this.loadConfigFromBackend()
-  },
+    await loadConfigFromBackend()
+    alert('策略配置保存成功！')
+  } catch (error) {
+    console.error('保存配置失败:', error)
+    alert('保存配置失败: ' + (error.message || '请检查网络连接'))
+  } finally {
+    isSaving.value = false
+  }
 }
+
+const resetToDefaults = () => {
+  if (confirm('确定要恢复到默认配置吗？')) {
+    loadConfigFromBackend()
+  }
+}
+
+// 生命周期钩子
+onMounted(() => {
+  loadConfigFromBackend()
+})
 </script>
 
 <style scoped>

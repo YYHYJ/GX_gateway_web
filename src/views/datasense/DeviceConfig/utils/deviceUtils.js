@@ -61,7 +61,7 @@ export const protocolUtils = {
 
 // 数据转换工具函数
 export const dataTransform = {
-  // 格式化设备数据
+  // 格式化设备数据（保留 rawData 供编辑时读取完整 protocol_type.config）
   formatDeviceItem(device) {
     return {
       id: device.id,
@@ -75,7 +75,7 @@ export const dataTransform = {
       points: 0, // 需要从其他接口获取
       interval: device.scan_interval,
       createTime: this.formatCreateTime(device.created_at),
-      rawData: device,
+      rawData: device, // 原始接口数据，含 protocol_type.config，编辑时用于回填配置
     }
   },
 

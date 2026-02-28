@@ -198,42 +198,233 @@
                   </div>
                 </div>
 
-                <!-- 通用配置显示（用于其他协议） -->
-                <div v-else class="config-json">
-                  <div class="json-header">
-                    <span>配置详情</span>
-                    <button type="button" class="json-toggle" @click="toggleJsonView">
-                      {{ showRawJson ? '表格视图' : 'JSON视图' }}
-                    </button>
+                <!-- Modbus RTU 配置 -->
+                <div v-if="formData.protocol_type.name === 'ModbusRTU'" class="config-fields">
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">串口</label>
+                      <input
+                        v-model="formData.protocol_type.config.serial_port"
+                        type="text"
+                        class="form-input"
+                        placeholder="COM1"
+                        :disabled="loading"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">波特率</label>
+                      <input
+                        v-model.number="formData.protocol_type.config.baud_rate"
+                        type="number"
+                        class="form-input"
+                        placeholder="9600"
+                        :disabled="loading"
+                        min="1"
+                      />
+                    </div>
                   </div>
-
-                  <!-- JSON视图 -->
-                  <div v-if="showRawJson" class="json-view">
-                    <pre>{{ formatJson(formData.protocol_type.config) }}</pre>
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">数据位</label>
+                      <input
+                        v-model.number="formData.protocol_type.config.data_bits"
+                        type="number"
+                        class="form-input"
+                        placeholder="8"
+                        :disabled="loading"
+                        min="5"
+                        max="8"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">停止位</label>
+                      <input
+                        v-model.number="formData.protocol_type.config.stop_bits"
+                        type="number"
+                        class="form-input"
+                        placeholder="1"
+                        :disabled="loading"
+                        min="1"
+                        max="2"
+                      />
+                    </div>
                   </div>
-
-                  <!-- 表格视图 -->
-                  <div v-else class="table-view">
-                    <div class="config-table">
-                      <div class="table-header">
-                        <div class="table-cell">配置项</div>
-                        <div class="table-cell">值</div>
-                      </div>
-                      <div
-                        v-for="(value, key) in formData.protocol_type.config"
-                        :key="key"
-                        class="table-row"
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">校验</label>
+                      <select
+                        v-model="formData.protocol_type.config.parity"
+                        class="form-select"
+                        :disabled="loading"
                       >
-                        <div class="table-cell">{{ formatKey(key) }}</div>
-                        <div class="table-cell">
-                          <input
-                            :value="value"
-                            type="text"
-                            class="form-input-sm"
-                            :disabled="loading"
-                            @input="updateConfigValue(key, $event.target.value)"
-                          />
-                        </div>
+                        <option value="">请选择</option>
+                        <option value="None">无</option>
+                        <option value="Even">偶校验</option>
+                        <option value="Odd">奇校验</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">从站ID</label>
+                      <input
+                        v-model.number="formData.protocol_type.config.slave_id"
+                        type="number"
+                        class="form-input"
+                        placeholder="1"
+                        :disabled="loading"
+                        min="1"
+                        max="247"
+                      />
+                    </div>
+                  </div>
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">超时(ms)</label>
+                      <input
+                        v-model.number="formData.protocol_type.config.timeout"
+                        type="number"
+                        class="form-input"
+                        placeholder="1000"
+                        :disabled="loading"
+                        min="100"
+                        max="10000"
+                        step="100"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CAN 协议配置 -->
+                <div v-if="formData.protocol_type.name === 'CAN'" class="config-fields">
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">接口名</label>
+                      <input
+                        v-model="formData.protocol_type.config.interface_name"
+                        type="text"
+                        class="form-input"
+                        placeholder="can0"
+                        :disabled="loading"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">网关自身</label>
+                      <label class="checkbox-label">
+                        <input
+                          type="checkbox"
+                          v-model="formData.protocol_type.config.is_gateway_self"
+                          :disabled="loading"
+                        />
+                        <span class="checkbox-text">是</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">节点类型</label>
+                      <input
+                        v-model.number="formData.protocol_type.config.node_category"
+                        type="number"
+                        class="form-input"
+                        :disabled="loading"
+                        min="0"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">CAN ID</label>
+                      <input
+                        v-model.number="formData.protocol_type.config.can_id"
+                        type="number"
+                        class="form-input"
+                        :disabled="loading"
+                        min="0"
+                        max="536870911"
+                      />
+                    </div>
+                  </div>
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">ID 类型</label>
+                      <select
+                        v-model.number="formData.protocol_type.config.can_id_type"
+                        class="form-select"
+                        :disabled="loading"
+                      >
+                        <option :value="0">标准</option>
+                        <option :value="1">扩展</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">过滤掩码</label>
+                      <input
+                        v-model.number="formData.protocol_type.config.filter_mask"
+                        type="number"
+                        class="form-input"
+                        :disabled="loading"
+                        min="0"
+                        max="536870911"
+                      />
+                    </div>
+                  </div>
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">数据超时(ms)</label>
+                      <input
+                        v-model.number="formData.protocol_type.config.data_timeout_ms"
+                        type="number"
+                        class="form-input"
+                        :disabled="loading"
+                        min="0"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">发送间隔(ms)</label>
+                      <input
+                        v-model.number="formData.protocol_type.config.send_interval_ms"
+                        type="number"
+                        class="form-input"
+                        :disabled="loading"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                  <div class="config-row">
+                    <div class="form-group">
+                      <label class="form-label">轮询间隔(ms)</label>
+                      <input
+                        v-model.number="formData.protocol_type.config.poll_interval_ms"
+                        type="number"
+                        class="form-input"
+                        :disabled="loading"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 通用配置显示（用于其他协议） -->
+                <div
+                  v-if="!['ModbusTCP', 'ModbusRTU', 'CAN'].includes(formData.protocol_type.name)"
+                  class="config-json"
+                >
+                  <div class="config-table">
+                    <div class="table-header">
+                      <div class="table-cell">配置项</div>
+                      <div class="table-cell">值</div>
+                    </div>
+                    <div
+                      v-for="(value, key) in formData.protocol_type.config"
+                      :key="key"
+                      class="table-row"
+                    >
+                      <div class="table-cell">{{ formatKey(key) }}</div>
+                      <div class="table-cell">
+                        <input
+                          :value="value"
+                          type="text"
+                          class="form-input-sm"
+                          :disabled="loading"
+                          @input="updateConfigValue(key, $event.target.value)"
+                        />
                       </div>
                     </div>
                   </div>
@@ -334,7 +525,6 @@ export default {
       selectedTemplateId: null,
       formData: this.getInitialFormData(),
       errors: {},
-      showRawJson: false,
       deviceCodeValidation: {
         length: false,
         startWithLetter: false,
@@ -422,7 +612,6 @@ export default {
       this.selectedTemplateId = null
       this.errorMessage = ''
       this.errors = {}
-      this.showRawJson = false
       this.deviceCodeValid = false
       this.deviceCodeValidation = {
         length: false,
@@ -594,6 +783,29 @@ export default {
           ? JSON.parse(JSON.stringify(template.protocol_type.config))
           : {}
 
+        // 为RTU及CAN协议提供默认字段
+        const protocolName = template.protocol_type.name
+        if (protocolName === 'ModbusRTU') {
+          protocolConfig.serial_port = protocolConfig.serial_port || ''
+          protocolConfig.baud_rate = protocolConfig.baud_rate || 9600
+          protocolConfig.data_bits = protocolConfig.data_bits || 8
+          protocolConfig.stop_bits = protocolConfig.stop_bits || 1
+          protocolConfig.parity = protocolConfig.parity || 'None'
+          protocolConfig.slave_id = protocolConfig.slave_id || 1
+          protocolConfig.timeout = protocolConfig.timeout || 1000
+        }
+        if (protocolName === 'CAN') {
+          protocolConfig.interface_name = protocolConfig.interface_name || 'can0'
+          protocolConfig.is_gateway_self = protocolConfig.is_gateway_self || false
+          protocolConfig.node_category = protocolConfig.node_category || 0
+          protocolConfig.can_id = protocolConfig.can_id || 0
+          protocolConfig.can_id_type = protocolConfig.can_id_type || 0
+          protocolConfig.filter_mask = protocolConfig.filter_mask || 0x7ff
+          protocolConfig.data_timeout_ms = protocolConfig.data_timeout_ms || 5000
+          protocolConfig.send_interval_ms = protocolConfig.send_interval_ms || 0
+          protocolConfig.poll_interval_ms = protocolConfig.poll_interval_ms || 1000
+        }
+
         // 设置表单数据
         this.formData = {
           ...this.formData,
@@ -619,16 +831,6 @@ export default {
           },
         }
       }
-    },
-
-    // 切换JSON视图
-    toggleJsonView() {
-      this.showRawJson = !this.showRawJson
-    },
-
-    // 格式化JSON显示
-    formatJson(obj) {
-      return JSON.stringify(obj, null, 2)
     },
 
     // 格式化配置键名
