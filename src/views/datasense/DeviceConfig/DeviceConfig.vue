@@ -29,13 +29,13 @@
             style="text-align: center; padding: 40px; color: #999"
           >
             <i class="fas fa-inbox fa-3x" style="margin-bottom: 20px; color: #ddd"></i>
-            <p>暂无设备实例</p>
+            <p>暂无设备</p>
             <button
               class="btn btn-primary"
               @click="handleAddDeviceInstance"
               style="margin-top: 10px"
             >
-              <i class="fas fa-plus"></i> 添加设备实例
+              <i class="fas fa-plus"></i> 添加设备
             </button>
           </div>
 
@@ -44,9 +44,9 @@
             <table class="instances-table">
               <thead>
                 <tr>
-                  <th>实例名称</th>
+                  <th>设备名称</th>
                   <th>模板名称</th>
-                  <th>实例代码</th>
+                  <th>设备代码</th>
                   <th>通信协议</th>
                   <th>通信状态</th>
                   <th>采集间隔</th>
@@ -120,7 +120,7 @@
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import CreateDeviceModal from '@/views/datasense/DeviceConfig/components/CreateDeviceModal.vue'
-import EditDeviceModal from '@/views/datasense/DeviceConfig/components/EditDeviceModal.vue' // 新增导入
+import EditDeviceModal from '@/views/datasense/DeviceConfig/components/EditDeviceModal.vue'
 import DeviceFilter from '@/views/datasense/DeviceConfig/components/DeviceFilter.vue'
 import Pagination from '@/views/datasense/DeviceConfig/components/Pagination.vue'
 import { deviceService } from '@/views/datasense/DeviceConfig/services/deviceService.js'
@@ -129,6 +129,7 @@ import {
   searchUtils,
   dataTransform,
 } from '@/views/datasense/DeviceConfig/utils/deviceUtils'
+import templateMapService from '@/utils/templateMapService'
 
 export default {
   name: 'DeviceConfig',
@@ -148,7 +149,7 @@ export default {
       ],
       pageActions: [
         {
-          text: '新增设备实例',
+          text: '新增设备',
           type: 'primary',
           icon: 'fas fa-plus',
           handler: () => {
@@ -172,7 +173,7 @@ export default {
     }
   },
   created() {
-    this.fetchDeviceInstances()
+    this.init()
   },
   computed: {
     displayInstances() {
@@ -182,6 +183,12 @@ export default {
     },
   },
   methods: {
+    // 初始化
+    async init() {
+      await templateMapService.loadTemplates()
+      this.fetchDeviceInstances()
+    },
+
     // 数据获取
     async fetchDeviceInstances() {
       this.startLoading()
@@ -204,7 +211,7 @@ export default {
     // 处理设备创建成功
     handleDeviceCreated() {
       this.fetchDeviceInstances()
-      this.$message.success('设备实例创建成功')
+      this.$message.success('设备创建成功')
     },
 
     // 处理模态框关闭
@@ -248,7 +255,14 @@ export default {
 
     handleApiResponse(data) {
       if (data.code === 200 && data.data?.devices) {
-        this.instances = data.data.devices.map((device) => dataTransform.formatDeviceItem(device))
+        this.instances = data.data.devices.map((device) => {
+          const formattedDevice = dataTransform.formatDeviceItem(device)
+          // 如果模板名称为空或默认值，使用共享服务获取
+          if (!formattedDevice.template || formattedDevice.template === '未知模板') {
+            formattedDevice.template = templateMapService.getTemplateName(device.model_id)
+          }
+          return formattedDevice
+        })
         this.filteredInstances = [...this.instances]
         this.updateTotalItems()
       } else {

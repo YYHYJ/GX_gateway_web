@@ -41,7 +41,7 @@ export default {
   props: {
     placeholder: {
       type: String,
-      default: '搜索实例代码、实例名称、通信协议...',
+      default: '搜索设备代码、设备名称、通信协议...',
     },
   },
   emits: ['search', 'filter-change', 'reset'],

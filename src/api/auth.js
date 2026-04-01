@@ -1,26 +1,29 @@
 /**
  * 认证相关API
- * 原理：封装所有与用户认证相关的接口调用
  */
-
 import request from '@/utils/request'
 
-/**
- * 用户登录
- * @param {Object} data 登录数据
- * @param {string} data.username 用户名
- * @param {string} data.password 密码
- * @returns {Promise} 返回Promise对象
- */
+// 用户登录
 export function login(data) {
   return request({
-    url: '/api/login',
+    url: '/api/auth/login',
     method: 'post',
     data,
   })
 }
 
-// 导出所有API函数
-export default {
-  login,
+// 用户登出
+export function logout() {
+  return request({
+    url: '/api/logout',
+    method: 'post',
+  })
+}
+
+// 获取用户信息
+export function getUserInfo() {
+  return request({
+    url: '/api/userinfo',
+    method: 'get',
+  })
 }

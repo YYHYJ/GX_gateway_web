@@ -52,8 +52,10 @@ export default {
         data: '数据采集',
         forward: '数据转发',
         system: '系统管理',
+        'system-management': '系统管理',
         logs: '日志系统',
         ota: 'OTA升级',
+        'ota-upgrade': 'OTA 升级',
       }
       return titleMap[this.activeNav] || '--'
     },
@@ -61,11 +63,13 @@ export default {
       const iconMap = {
         dashboard: 'fas fa-tachometer-alt',
         data: 'fas fa-database',
-        system: 'fas fa-cog',
+        system: 'fas fa-cogs',
+        'system-management': 'fas fa-cogs',
         logs: 'fas fa-clipboard-list',
-        ota: 'fas fa-upload',
+        ota: 'fas fa-cloud-upload-alt',
+        'ota-upgrade': 'fas fa-cloud-upload-alt',
       }
-      return iconMap[this.activeNav] || 'fas fa-tachometer-alt'
+      return iconMap[this.activeNav] || 'fas fa-cogs'
     },
   },
   methods: {

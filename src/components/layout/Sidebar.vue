@@ -13,7 +13,7 @@
         :key="item.id"
         class="nav-item"
         :class="{
-          active: activeItem === item.id,
+          active: isNavActive(item),
           expanded: shouldExpand(item),
           'has-children': item.children && item.children.length,
         }"
@@ -35,7 +35,7 @@
             :key="child.id"
             :to="child.path"
             class="submenu-item"
-            :class="{ active: activeSubItem === child.id }"
+            :class="{ active: resolvedSubItem === child.id }"
             @click="handleSubNavClick(child, item, $event)"
           >
             {{ child.name }}
@@ -52,7 +52,7 @@ export default {
   props: {
     activeItem: {
       type: String,
-      default: 'dashboard',
+      default: '',
     },
     activeSubItem: {
       type: String,
@@ -112,11 +112,11 @@ export default {
               name: '北向Modbus',
               path: '/transform/modbus',
             },
-            {
-              id: 'influx-transform',
-              name: 'InfluxDB存储',
-              path: '/transform/influxdb',
-            },
+            // {
+            //   id: 'influx-transform',
+            //   name: 'InfluxDB存储',
+            //   path: '/transform/influxdb',
+            // },
           ],
         },
         {
@@ -126,9 +126,9 @@ export default {
           path: '',
           children: [
             {
-              id: 'system-settings',
-              name: '系统设置',
-              path: '/system/settings',
+              id: 'time-settings',
+              name: '时间设置',
+              path: '/system/time',
             },
             {
               id: 'communication-interface',
@@ -197,35 +197,63 @@ export default {
     },
   },
   computed: {
+    // 根据当前路由自动推断激活的菜单项（兜底逻辑，解决各页面 prop 不统一的问题）
+    routeMatched() {
+      const path = this.$route?.path || ''
+      for (const menu of this.menuItems) {
+        if (menu.path && menu.path === path) {
+          return { parent: menu.id, child: null }
+        }
+        if (menu.children) {
+          for (const child of menu.children) {
+            if (child.path && path.startsWith(child.path)) {
+              return { parent: menu.id, child: child.id }
+            }
+          }
+        }
+      }
+      return { parent: null, child: null }
+    },
+    // 最终使用的一级菜单 id：优先用 prop，否则用路由推断
+    resolvedActiveItem() {
+      return this.activeItem || this.routeMatched.parent
+    },
+    // 最终使用的二级菜单 id：优先用 prop，否则用路由推断
+    resolvedSubItem() {
+      return this.activeSubItem || this.routeMatched.child
+    },
     // 计算当前应该展开哪个菜单
     currentExpandedMenuId() {
-      // 1. 如果有手动展开的菜单，使用它
       if (this.manuallyExpanded) {
         return this.manuallyExpanded
       }
-
-      // 2. 如果当前有激活的一级菜单且有子菜单，使用它
-      if (this.activeItem) {
-        const menuItem = this.menuItems.find((item) => item.id === this.activeItem)
-        if (menuItem && menuItem.children && menuItem.children.length) {
-          return this.activeItem
-        }
-      }
-
-      // 3. 如果有激活的子菜单，展开其父菜单
-      if (this.activeSubItem) {
+      // 如果有激活的子菜单，展开其父菜单
+      if (this.resolvedSubItem) {
         const parentMenu = this.menuItems.find(
-          (item) => item.children && item.children.some((child) => child.id === this.activeSubItem),
+          (item) => item.children && item.children.some((child) => child.id === this.resolvedSubItem),
         )
-        if (parentMenu) {
-          return parentMenu.id
+        if (parentMenu) return parentMenu.id
+      }
+      // 如果当前有激活的一级菜单且有子菜单，展开它
+      const resolved = this.resolvedActiveItem
+      if (resolved) {
+        const menuItem = this.menuItems.find((item) => item.id === resolved)
+        if (menuItem && menuItem.children && menuItem.children.length) {
+          return resolved
         }
       }
-
       return null
     },
   },
   methods: {
+    // 判断一级菜单是否应该高亮：自身匹配 或 其子菜单被选中
+    isNavActive(item) {
+      if (this.resolvedActiveItem === item.id) return true
+      if (item.children && item.children.length && this.resolvedSubItem) {
+        return item.children.some(child => child.id === this.resolvedSubItem)
+      }
+      return false
+    },
     updateActiveStateFromRoute(route) {
       // 查找匹配的路由对应的菜单项
       let foundParent = null

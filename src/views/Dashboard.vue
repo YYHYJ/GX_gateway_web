@@ -1,6 +1,6 @@
 <template>
   <!-- 仪表盘页面 -->
-  <MainLayout active-nav="data" user-name="管理员" @nav-change="handleNavigation">
+  <MainLayout active-nav="dashboard" user-name="管理员" @nav-change="handleNavigation">
     <div class="dashboard-vertical">
       <!-- 系统信息概览卡片 -->
       <div class="card">
@@ -186,6 +186,7 @@
 <script>
 import MainLayout from '@/components/layout/MainLayout.vue'
 import { getSystemInfo, getSystemStatus } from '@/api/system.js'
+import { getTimeInfo } from '@/api/time.js'
 
 export default {
   name: 'Dashboard',
@@ -199,6 +200,7 @@ export default {
         avatar: '',
       },
       local_time: '',
+      serverTime: null,
       timer: null,
       loading: false,
 
@@ -277,9 +279,8 @@ export default {
     },
   },
   mounted() {
-    // 启动时间更新
-    this.updateTime()
-    this.timer = setInterval(this.updateTime, 1000)
+    // 从后端获取系统时间
+    this.fetchTime()
 
     // 页面加载时自动请求系统信息
     this.fetchSystemInfo()
@@ -301,10 +302,30 @@ export default {
       console.log('导航到:', navId)
     },
 
-    // 更新时间显示
+    // 从后端获取系统时间，然后本地每秒递增
+    async fetchTime() {
+      if (this.timer) clearInterval(this.timer)
+      try {
+        const res = await getTimeInfo()
+        if (res.code === 200) {
+          this.serverTime = new Date(res.data.datetime)
+        } else {
+          this.serverTime = new Date()
+        }
+      } catch {
+        this.serverTime = new Date()
+      }
+      this.updateTime()
+      this.timer = setInterval(this.updateTime, 1000)
+    },
+
     updateTime() {
-      const now = new Date()
-      this.local_time = now.toLocaleString('zh-CN', {
+      if (this.serverTime) {
+        this.serverTime = new Date(this.serverTime.getTime() + 1000)
+      } else {
+        this.serverTime = new Date()
+      }
+      this.local_time = this.serverTime.toLocaleString('zh-CN', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -420,7 +441,7 @@ export default {
       }
     },
 
-    // 更新硬件数据 - 修改这里，保留两位小数
+    // 更新硬件数据
     updateHardwareData(data) {
       console.log('更新硬件数据:', data)
 
@@ -428,7 +449,12 @@ export default {
       const cpuUsage = parseFloat(data.cpu_usage || 0).toFixed(2)
       const memoryUsage = parseFloat(data.memory_usage || 0).toFixed(2)
       const storageUsage = parseFloat(data.storage_usage || 0).toFixed(2)
-      const loadAverage = data.load_average || [0, 0, 0]
+      const rawLoad = data.load_average
+      const loadAverage = Array.isArray(rawLoad)
+        ? rawLoad.map(v => parseFloat(v) || 0)
+        : typeof rawLoad === 'string'
+          ? rawLoad.split(/[,\s]+/).filter(Boolean).map(v => parseFloat(v) || 0)
+          : [0, 0, 0]
 
       // 确定硬件状态（使用数值进行比较）
       const cpuUsageValue = parseFloat(cpuUsage)
@@ -448,7 +474,7 @@ export default {
         cpuUsageValue: cpuUsageValue,
         memoryUsage: `${memoryUsage}%`,
         memoryUsageValue: memoryUsageValue,
-        storageUsage: `${storageUsage}% (${data.total_storage || '未知'})`,
+        storageUsage: `${storageUsage}%`,  // 只显示百分比
         storageUsageValue: storageUsageValue,
         storageDevice: data.storage_device || '未知',
         totalStorage: data.total_storage || '未知',

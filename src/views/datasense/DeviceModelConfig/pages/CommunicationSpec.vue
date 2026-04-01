@@ -53,6 +53,7 @@ import {
   getProtocolIcon,
   isValidProtocol,
 } from '../services/protocolService'
+import templateMapService from '@/utils/templateMapService'
 
 // 协议组件映射（保持不变）
 const ProtocolComponents = {
@@ -282,18 +283,15 @@ export default {
       try {
         console.log('加载模板信息，templateId:', this.templateId)
 
-        // 这里应该调用API获取模板信息
-        // 暂时使用模拟数据
+        // 使用共享的模板映射服务
+        await templateMapService.loadTemplates()
+        this.templateName = templateMapService.getTemplateName(this.templateId)
+        
         this.templateData = {
           id: this.templateId,
-          model_name: 'model_name',
-          manufacturer: '示例厂商',
+          model_name: this.templateName,
           protocol_type: this.protocolType,
         }
-        this.templateName = this.templateData.model_name
-
-        // 模拟API调用延迟
-        await new Promise((resolve) => setTimeout(resolve, 300))
 
         console.log('模板信息加载完成:', this.templateData)
 

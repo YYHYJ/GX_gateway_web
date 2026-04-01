@@ -81,6 +81,48 @@ const routes = [
   },
 
   {
+    path: '/system/time',
+    name: 'TimeSettings',
+    component: () => import('@/views/systemmanagement/TimeSettings.vue'),
+    meta: { requiresAuth: true, activeNav: 'system-management', activeSubItem: 'time-settings' },
+  },
+  {
+    path: '/system/communication-interface',
+    name: 'CommunicationInterface',
+    component: () => import('@/views/systemmanagement/CommunicationInterface.vue'),
+    meta: { requiresAuth: true, activeNav: 'system-management', activeSubItem: 'communication-interface' },
+  },
+  {
+    path: '/system/network',
+    name: 'NetworkConfig',
+    component: () => import('@/views/systemmanagement/NetworkConfig.vue'),
+    meta: { requiresAuth: true, activeNav: 'system-management', activeSubItem: 'network-config' },
+  },
+  {
+    path: '/system/users',
+    name: 'UserManagement',
+    component: () => import('@/views/systemmanagement/UserManagement.vue'),
+    meta: { requiresAuth: true, activeNav: 'system-management', activeSubItem: 'user-management' },
+  },
+  {
+    path: '/system/backup',
+    name: 'DataBackup',
+    component: () => import('@/views/systemmanagement/DataBackup.vue'),
+    meta: { requiresAuth: true, activeNav: 'system-management', activeSubItem: 'data-backup' },
+  },
+  {
+    path: '/transform/modbus',
+    name: 'ModbusNorth',
+    component: () => import('@/views/transform/modbus/ModbusNorth.vue'),
+    meta: { requiresAuth: true, activeNav: 'data-forwarding', activeSubItem: 'modbus-transform' },
+  },
+  {
+    path: '/ota',
+    name: 'OtaUpgrade',
+    component: () => import('@/views/ota/OtaUpgrade.vue'),
+    meta: { requiresAuth: true, activeNav: 'ota-upgrade' },
+  },
+  {
     path: '/logs/system',
     name: 'SystemLog',
     component: () => import('@/views/log/SystemLog.vue'),

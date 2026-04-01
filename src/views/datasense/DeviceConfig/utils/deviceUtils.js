@@ -68,7 +68,7 @@ export const dataTransform = {
       model_id: device.model_id,
       name: device.device_name,
       code: device.device_code,
-      template: device.model_name,
+      template: device.model_name || device.template_name || device.modelName || '未知模板',
       protocol: device.protocol_type?.name || '',
       protocolDisplay: protocolUtils.getProtocolDisplayName(device.protocol_type?.name || ''),
       status: deviceStatus.calculateDeviceStatus(device),

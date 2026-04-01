@@ -420,22 +420,17 @@
 
 <script>
 import axios from 'axios'
+import { protocolMixin, dataTypeOptions } from './protocolMixin.js'
+
 export default {
   name: 'CANProtocol',
+  mixins: [protocolMixin],
   props: {
     templateId: { type: [String, Number], required: true },
     templateData: { type: Object, default: () => ({}) },
   },
   data() {
     return {
-      loading: false,
-      error: '',
-      allPoints: [],
-      filteredPoints: [],
-      points: [],
-      selectedPoints: [],
-      selectAll: false,
-      searchText: '',
       filters: {
         status: '',
         idType: '',
@@ -444,12 +439,6 @@ export default {
         isControl: '',
         isWarnPoint: '',
       },
-      currentPage: 1,
-      pageSize: 10,
-      totalItems: 0,
-      totalPages: 1,
-      showDialog: false,
-      editingPoint: null,
       pointForm: {
         id: null,
         modelId: null,
@@ -477,7 +466,11 @@ export default {
         warningHigh: 0,
         description: '',
       },
-      dataTypeOptions: [
+    }
+  },
+  computed: {
+    dataTypeOptions() {
+      return [
         { value: 'int8', label: 'INT8' },
         { value: 'uint8', label: 'UINT8' },
         { value: 'int16', label: 'INT16' },
@@ -487,25 +480,7 @@ export default {
         { value: 'float', label: 'FLOAT' },
         { value: 'double', label: 'DOUBLE' },
         { value: 'boolean', label: 'BOOLEAN' },
-      ],
-    }
-  },
-  computed: {
-    hasSearchFilter() {
-      return this.searchText.trim() !== '' || Object.values(this.filters).some((v) => v !== '')
-    },
-    pageNumbers() {
-      const pages = [],
-        maxPages = 5
-      if (this.totalPages <= maxPages) {
-        for (let i = 1; i <= this.totalPages; i++) pages.push(i)
-      } else {
-        let start = Math.max(1, this.currentPage - 2)
-        let end = Math.min(this.totalPages, start + maxPages - 1)
-        if (end - start < maxPages - 1) start = Math.max(1, end - maxPages + 1)
-        for (let i = start; i <= end; i++) pages.push(i)
-      }
-      return pages
+      ]
     },
     sortedPoints() {
       return [...this.points].sort((a, b) => {
@@ -624,51 +599,7 @@ export default {
       this.filteredPoints = filtered
       this.updatePagination()
     },
-    updatePagination() {
-      this.currentPage = 1
-      this.totalItems = this.filteredPoints.length
-      this.totalPages = Math.max(1, Math.ceil(this.totalItems / this.pageSize))
-      this.updateCurrentPageData()
-    },
-    updateCurrentPageData() {
-      if (!this.filteredPoints.length) {
-        this.points = []
-        return
-      }
-      const start = (this.currentPage - 1) * this.pageSize
-      this.points = this.filteredPoints.slice(start, start + this.pageSize)
-      if (this.currentPage > this.totalPages && this.totalPages > 0) {
-        this.currentPage = this.totalPages
-        this.updateCurrentPageData()
-      }
-    },
-    changePage() {
-      this.currentPage = Math.max(1, Math.min(this.currentPage, this.totalPages))
-      this.updateCurrentPageData()
-    },
-    changePageSize() {
-      this.totalPages = Math.max(1, Math.ceil(this.totalItems / this.pageSize))
-      if (this.currentPage > this.totalPages) this.currentPage = this.totalPages
-      this.updateCurrentPageData()
-    },
-    prevPage() {
-      if (this.currentPage > 1) {
-        this.currentPage--
-        this.updateCurrentPageData()
-      }
-    },
-    nextPage() {
-      if (this.currentPage < this.totalPages) {
-        this.currentPage++
-        this.updateCurrentPageData()
-      }
-    },
-    goToPage(page) {
-      if (page >= 1 && page <= this.totalPages) {
-        this.currentPage = page
-        this.updateCurrentPageData()
-      }
-    },
+
     resetSearch() {
       this.searchText = ''
       this.filters = {
@@ -680,11 +611,7 @@ export default {
         isWarnPoint: '',
       }
     },
-    toggleSelectAll() {
-      this.selectAll
-        ? (this.selectedPoints = this.points.map((p) => p.id))
-        : (this.selectedPoints = [])
-    },
+
     showAddPointDialog() {
       this.editingPoint = null
       this.resetPointForm()
@@ -699,11 +626,7 @@ export default {
       }
       this.showDialog = true
     },
-    closeDialog() {
-      this.showDialog = false
-      this.editingPoint = null
-      this.resetPointForm()
-    },
+
     resetPointForm() {
       this.pointForm = {
         id: null,
@@ -904,6 +827,9 @@ export default {
 </script>
 
 <style scoped>
+@import './protocolCommon.css';
+
+/* CAN 协议特有样式 */
 .can-protocol-config {
   width: 100%;
 }
@@ -913,195 +839,8 @@ export default {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   overflow: hidden;
 }
-.search-bar {
-  display: flex;
-  margin-bottom: 20px;
-  padding: 20px 20px 0;
-}
-.search-input {
-  flex: 1;
-  padding: 10px 15px;
-  border: 1px solid #ddd;
-  border-radius: 5px 0 0 5px;
-  font-size: 16px;
-}
-.search-btn {
-  padding: 10px 20px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 0 5px 5px 0;
-  cursor: pointer;
-}
-.filter-bar {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
-  padding: 0 20px;
-  flex-wrap: wrap;
-}
-.filter-select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  background-color: white;
-  min-width: 150px;
-}
-.action-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: 0 20px;
-}
-.action-left,
-.action-right {
-  display: flex;
-  gap: 10px;
-}
-.btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.btn-primary {
-  background-color: #3498db;
-  color: white;
-}
-.btn-outline {
-  background-color: transparent;
-  border: 1px solid #95a5a6;
-  color: #34495e;
-}
-.btn-danger {
-  background-color: #e74c3c;
-  color: white;
-}
-.btn-success {
-  background-color: #2ecc71;
-  color: white;
-}
-.btn:hover {
-  opacity: 0.9;
-}
-.points-container {
-  padding: 0 20px;
-}
-.table-container {
-  overflow-x: auto;
-  width: 100%;
-  position: relative;
-}
 .points-table {
-  width: 100%;
-  border-collapse: collapse;
   min-width: 1800px;
-}
-.points-table th {
-  background-color: #f8f9fa;
-  padding: 15px 12px;
-  text-align: left;
-  font-weight: 600;
-  color: #2c3e50;
-  border-bottom: 2px solid #e0e0e0;
-  white-space: nowrap;
-}
-.points-table td {
-  padding: 15px 12px;
-  border-bottom: 1px solid #f0f0f0;
-  white-space: nowrap;
-}
-.points-table tr:hover {
-  background-color: #f8f9fa;
-}
-.point-name {
-  font-weight: 600;
-  color: #2c3e50;
-}
-.point-desc {
-  color: #95a5a6;
-  font-size: 14px;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.table-actions {
-  display: flex;
-  gap: 10px;
-}
-.action-link {
-  color: #3498db;
-  text-decoration: none;
-  cursor: pointer;
-  font-size: 14px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background-color 0.3s;
-}
-.action-link:hover {
-  background-color: #f0f0f0;
-  text-decoration: none;
-}
-.action-link.delete {
-  color: #e74c3c;
-}
-.status-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: bold;
-  white-space: nowrap;
-}
-.status-active {
-  background-color: #d4edda;
-  color: #155724;
-}
-.status-inactive {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-.control-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: bold;
-  white-space: nowrap;
-}
-.control-enabled {
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-.control-disabled {
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-.warn-badge {
-  display: inline-block;
-  padding: 3px 8px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 500;
-}
-.warn-yes {
-  background-color: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeaa7;
-}
-.warn-no {
-  background-color: #e2e3e5;
-  color: #383d41;
-  border: 1px solid #d6d8db;
 }
 .fragment-badge {
   display: inline-block;
@@ -1121,323 +860,7 @@ export default {
   color: #004085;
   border: 1px solid #b8daff;
 }
-.pagination-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-top: 1px solid #e0e0e0;
-}
-.page-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.page-input {
-  width: 60px;
-  padding: 5px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  text-align: center;
-}
-.page-size-select {
-  padding: 5px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-.pagination {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-.page-btn {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  background-color: white;
-  cursor: pointer;
-  border-radius: 5px;
-}
-.page-btn.active {
-  background-color: #3498db;
-  color: white;
-  border-color: #3498db;
-}
-.page-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 .batch-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin: 20px;
-  padding: 15px;
-  background-color: #e3f2fd;
-  border-radius: 6px;
-}
-.batch-actions span {
-  font-weight: 500;
-  color: #1976d2;
-}
-.batch-buttons {
-  display: flex;
-  gap: 10px;
-}
-.loading-state,
-.error-state,
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 300px;
-  text-align: center;
-  padding: 40px;
-}
-.loading-state .spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #3498db;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 15px;
-}
-.error-state i {
-  font-size: 48px;
-  color: #e74c3c;
-  margin-bottom: 15px;
-}
-.error-state h3 {
-  margin-bottom: 10px;
-  color: #e74c3c;
-}
-.empty-state i {
-  font-size: 64px;
-  color: #95a5a6;
-  margin-bottom: 20px;
-}
-.empty-state h3 {
-  margin-bottom: 10px;
-  color: #2c3e50;
-}
-.empty-state p {
-  color: #7f8c8d;
-  margin-bottom: 20px;
-}
-.no-match-row td {
-  padding: 40px !important;
-  text-align: center;
-}
-.no-match {
-  text-align: center;
-  padding: 40px !important;
-  color: #95a5a6;
-}
-.no-match i {
-  font-size: 48px;
-  margin-bottom: 15px;
-  display: block;
-}
-.no-match p {
-  margin-bottom: 20px;
-}
-.dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-.dialog-content {
-  background: white;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 900px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-}
-.dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
-}
-.dialog-header h3 {
-  margin: 0;
-  font-size: 18px;
-  color: #2c3e50;
-}
-.dialog-close {
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  color: #95a5a6;
-  padding: 5px;
-  border-radius: 4px;
-}
-.dialog-close:hover {
-  background-color: #f8f9fa;
-  color: #e74c3c;
-}
-.dialog-body {
-  padding: 20px;
-}
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-}
-.form-group {
-  margin-bottom: 15px;
-}
-.form-group.full-width {
-  grid-column: 1 / -1;
-}
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #34495e;
-  font-size: 14px;
-}
-.form-group .required {
-  color: #e74c3c;
-  margin-right: 4px;
-}
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  color: #34495e;
-}
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
-}
-.dialog-footer {
-  padding: 20px;
-  border-top: 1px solid #e0e0e0;
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-.points-table th:first-child,
-.points-table td:first-child {
-  position: sticky;
-  left: 0;
-  background-color: #f8f9fa;
-  z-index: 20;
-  border-right: 1px solid #e0e0e0;
-}
-.fixed-column-action {
-  position: sticky;
-  right: 0;
-  background-color: #f8f9fa;
-  z-index: 10;
-  border-left: 2px solid #e0e0e0;
-}
-.points-table td.fixed-column-action {
-  background-color: white;
-  z-index: 5;
-}
-.points-table tr:hover td.fixed-column-action {
-  background-color: #f8f9fa;
-}
-.points-table tr:hover td:first-child {
-  background-color: #f8f9fa;
-}
-.points-table th.fixed-column-action::before,
-.points-table td.fixed-column-action::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -2px;
-  height: 100%;
-  width: 2px;
-  background-color: #e0e0e0;
-  box-shadow: -2px 0 3px rgba(0, 0, 0, 0.1);
-}
-.table-container::-webkit-scrollbar {
-  height: 8px;
-}
-.table-container::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-.table-container::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-.table-container::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-.dialog-content::-webkit-scrollbar {
-  width: 8px;
-}
-.dialog-content::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-.dialog-content::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-.dialog-content::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-@media (max-width: 768px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-  .filter-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .filter-select {
-    width: 100%;
-  }
-  .action-bar {
-    flex-direction: column;
-    gap: 10px;
-  }
-  .action-left,
-  .action-right {
-    width: 100%;
-    justify-content: center;
-  }
-  .pagination-controls {
-    flex-direction: column;
-    gap: 15px;
-  }
-  .page-info {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
 }
 </style>

@@ -705,7 +705,20 @@ export default {
       this.settingDebugFlag = true
 
       try {
-        const response = await axios.post('/api/change_flag', {
+        // 获取设备协议类型
+        const device = this.devices.find(d => String(d.id) === String(this.selectedDevice.id))
+        const protocolType = device?.protocol_type?.name || device?.protocol_type || ''
+        const protocolLower = String(protocolType).toLowerCase()
+        
+        // 根据协议类型选择不同的 API
+        let apiUrl = '/api/change_flag'
+        if (protocolLower === 'can' || protocolLower.includes('can')) {
+          apiUrl = '/api/change_flag/can'
+        }
+        
+        console.log('[调试模式] 设备协议:', protocolType, '使用API:', apiUrl)
+
+        const response = await axios.post(apiUrl, {
           debug_enabled: newDebugMode,
           device_codes: [this.selectedDevice.device_code],
         })
@@ -770,8 +783,30 @@ export default {
     // 获取调试日志
     async fetchDebugLogs(startPosition, maxLines = 1000) {
       try {
+        // 根据设备协议类型确定日志文件名
+        let logFilename = 'mddebug.log' // 默认 Modbus 日志
+        
+        if (this.selectedDevice) {
+          // 获取当前设备的协议类型
+          const device = this.devices.find(d => String(d.id) === String(this.selectedDevice.id))
+          if (device && device.protocol_type) {
+            const protocolType = device.protocol_type.name || device.protocol_type
+            const protocolLower = String(protocolType).toLowerCase()
+            
+            // 根据协议类型选择日志文件
+            if (protocolLower === 'can' || protocolLower.includes('can')) {
+              logFilename = 'can_debug.log'
+            } else {
+              // Modbus 或其他协议使用默认日志
+              logFilename = 'mddebug.log'
+            }
+            
+            console.log('[调试日志] 设备协议:', protocolType, '使用日志文件:', logFilename)
+          }
+        }
+
         const params = {
-          filename: 'mddebug.log',
+          filename: logFilename,
           lastPosition: startPosition,
           maxLines: maxLines,
         }

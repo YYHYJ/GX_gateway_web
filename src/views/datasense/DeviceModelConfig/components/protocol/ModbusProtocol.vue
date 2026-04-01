@@ -107,7 +107,7 @@
 
       <!-- 点位列表 -->
       <div v-else class="points-container">
-        <div class="table-container">
+        <div class="table-container" :style="{ maxHeight: tableMaxHeight + 'px' }">
           <table class="points-table">
             <thead>
               <tr>
@@ -153,57 +153,153 @@
                   <input type="checkbox" v-model="selectedPoints" :value="point.id" />
                 </td>
 
-                <td>{{ point.pointCode }}</td>
-                <td>
-                  <div class="point-name">{{ point.pointName }}</div>
+                <!-- 点位代码：文本输入 -->
+                <td @click="startInlineEdit(point, 'pointCode')">
+                  <input v-if="isEditing(point, 'pointCode')" v-model="inlineEditValue" class="inline-edit-input" @blur="saveInlineEdit(point, 'pointCode')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
+                  <div v-else class="cell-editable">{{ point.pointCode }}</div>
                 </td>
-                <td>
-                  <span
-                    class="status-badge"
-                    :class="point.isActive === 1 ? 'status-active' : 'status-inactive'"
-                  >
+
+                <!-- 点位名称：文本输入 -->
+                <td @click="startInlineEdit(point, 'pointName')">
+                  <input v-if="isEditing(point, 'pointName')" v-model="inlineEditValue" class="inline-edit-input" @blur="saveInlineEdit(point, 'pointName')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
+                  <div v-else class="point-name cell-editable">{{ point.pointName }}</div>
+                </td>
+
+                <!-- 状态：点击切换 -->
+                <td @click="toggleField(point, 'isActive')">
+                  <span class="status-badge toggle-badge" :class="point.isActive === 1 ? 'status-active' : 'status-inactive'">
                     {{ point.isActive === 1 ? '启用' : '停用' }}
                   </span>
                 </td>
-                <td>{{ point.address }}</td>
-                <td>
-                  <span
-                    class="control-badge"
-                    :class="point.isControl === 1 ? 'control-enabled' : 'control-disabled'"
-                  >
+
+                <!-- 地址：数字输入 -->
+                <td @click="startInlineEdit(point, 'address')">
+                  <input v-if="isEditing(point, 'address')" v-model.number="inlineEditValue" type="number" class="inline-edit-input" @blur="saveInlineEdit(point, 'address')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
+                  <div v-else class="cell-editable">{{ point.address }}</div>
+                </td>
+
+                <!-- 可控：点击切换 -->
+                <td @click="toggleField(point, 'isControl')">
+                  <span class="control-badge toggle-badge" :class="point.isControl === 1 ? 'control-enabled' : 'control-disabled'">
                     {{ point.isControl === 1 ? '可控' : '不可控' }}
                   </span>
                 </td>
-                <td>{{ point.functionCode }}</td>
-                <td>{{ formatDataType(point.dataType) }}</td>
-                <td>{{ point.scaleFactor }}</td>
-                <td>{{ point.offset }}</td>
-                <td>{{ point.engineeringUnit }}</td>
-                <td>{{ point.precision }}</td>
-                <td>{{ formatByteOrder(point.byteOrder) }}</td>
-                <td>{{ point.minValue }}</td>
-                <td>{{ point.maxValue }}</td>
+
+                <!-- 功能码：下拉选择 -->
+                <td @click="startInlineEdit(point, 'functionCode')">
+                  <select v-if="isEditing(point, 'functionCode')" v-model.number="inlineEditValue" class="inline-edit-select" @change="saveInlineEdit(point, 'functionCode')" @blur="cancelInlineEdit" ref="inlineInput">
+                    <option :value="1">01 - 遥信</option>
+                    <option :value="2">02 - 遥信</option>
+                    <option :value="3">03 - 遥测</option>
+                    <option :value="4">04 - 遥测</option>
+                    <option :value="5">05 - 遥控</option>
+                    <option :value="6">06 - 遥调</option>
+                    <option :value="15">15 - 遥控</option>
+                    <option :value="16">16 - 遥调</option>
+                  </select>
+                  <div v-else class="cell-editable">{{ point.functionCode }}</div>
+                </td>
+
+                <!-- 数据类型：下拉选择 -->
+                <td @click="startInlineEdit(point, 'dataType')">
+                  <select v-if="isEditing(point, 'dataType')" v-model="inlineEditValue" class="inline-edit-select" @change="saveInlineEdit(point, 'dataType')" @blur="cancelInlineEdit" ref="inlineInput">
+                    <option v-for="type in dataTypeOptions" :key="type.value" :value="type.value">{{ type.label }}</option>
+                  </select>
+                  <div v-else class="cell-editable">{{ formatDataType(point.dataType) }}</div>
+                </td>
+
+                <!-- 缩放因子：数字输入 -->
+                <td @click="startInlineEdit(point, 'scaleFactor')">
+                  <input v-if="isEditing(point, 'scaleFactor')" v-model.number="inlineEditValue" type="number" step="0.01" class="inline-edit-input" @blur="saveInlineEdit(point, 'scaleFactor')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
+                  <div v-else class="cell-editable">{{ point.scaleFactor }}</div>
+                </td>
+
+                <!-- 偏移量：数字输入 -->
+                <td @click="startInlineEdit(point, 'offset')">
+                  <input v-if="isEditing(point, 'offset')" v-model.number="inlineEditValue" type="number" step="0.01" class="inline-edit-input" @blur="saveInlineEdit(point, 'offset')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
+                  <div v-else class="cell-editable">{{ point.offset }}</div>
+                </td>
+
+                <!-- 工程单位：文本输入 -->
+                <td @click="startInlineEdit(point, 'engineeringUnit')">
+                  <input v-if="isEditing(point, 'engineeringUnit')" v-model="inlineEditValue" class="inline-edit-input" @blur="saveInlineEdit(point, 'engineeringUnit')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
+                  <div v-else class="cell-editable">{{ point.engineeringUnit || '--' }}</div>
+                </td>
+
+                <!-- 精度：上下按钮整数切换 -->
                 <td>
-                  <span
-                    class="warn-badge"
-                    :class="point.isWarnPoint === 1 ? 'warn-yes' : 'warn-no'"
-                  >
+                  <div class="precision-stepper">
+                    <button class="stepper-btn" @click="stepPrecision(point, -1)" :disabled="point.precision <= 0">−</button>
+                    <span class="stepper-value">{{ point.precision }}</span>
+                    <button class="stepper-btn" @click="stepPrecision(point, 1)">+</button>
+                  </div>
+                </td>
+
+                <!-- 字节序：下拉选择 -->
+                <td @click="startInlineEdit(point, 'byteOrder')">
+                  <select v-if="isEditing(point, 'byteOrder')" v-model="inlineEditValue" class="inline-edit-select" @change="saveInlineEdit(point, 'byteOrder')" @blur="cancelInlineEdit" ref="inlineInput">
+                    <option value="big_endian">大端模式</option>
+                    <option value="little_endian">小端模式</option>
+                  </select>
+                  <div v-else class="cell-editable">{{ formatByteOrder(point.byteOrder) }}</div>
+                </td>
+
+                <!-- 最小值：数字输入 -->
+                <td @click="startInlineEdit(point, 'minValue')">
+                  <input v-if="isEditing(point, 'minValue')" v-model.number="inlineEditValue" type="number" class="inline-edit-input" @blur="saveInlineEdit(point, 'minValue')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
+                  <div v-else class="cell-editable">{{ point.minValue }}</div>
+                </td>
+
+                <!-- 最大值：数字输入 -->
+                <td @click="startInlineEdit(point, 'maxValue')">
+                  <input v-if="isEditing(point, 'maxValue')" v-model.number="inlineEditValue" type="number" class="inline-edit-input" @blur="saveInlineEdit(point, 'maxValue')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
+                  <div v-else class="cell-editable">{{ point.maxValue }}</div>
+                </td>
+
+                <!-- 报警点：点击切换 -->
+                <td @click="toggleField(point, 'isWarnPoint')">
+                  <span class="warn-badge toggle-badge" :class="point.isWarnPoint === 1 ? 'warn-yes' : 'warn-no'">
                     {{ point.isWarnPoint === 1 ? '是' : '否' }}
                   </span>
                 </td>
-                <td>{{ point.warningLow }}</td>
-                <td>{{ point.warningHigh }}</td>
-                <td>
-                  <span
-                    class="virtual-badge"
-                    :class="point.isVirtual === 1 ? 'virtual-yes' : 'virtual-no'"
-                  >
+
+                <!-- 报警下限：数字输入 -->
+                <td @click="startInlineEdit(point, 'warningLow')">
+                  <input v-if="isEditing(point, 'warningLow')" v-model.number="inlineEditValue" type="number" class="inline-edit-input" @blur="saveInlineEdit(point, 'warningLow')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
+                  <div v-else class="cell-editable">{{ point.warningLow }}</div>
+                </td>
+
+                <!-- 报警上限：数字输入 -->
+                <td @click="startInlineEdit(point, 'warningHigh')">
+                  <input v-if="isEditing(point, 'warningHigh')" v-model.number="inlineEditValue" type="number" class="inline-edit-input" @blur="saveInlineEdit(point, 'warningHigh')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
+                  <div v-else class="cell-editable">{{ point.warningHigh }}</div>
+                </td>
+
+                <!-- 虚拟点位：点击切换 -->
+                <td @click="toggleField(point, 'isVirtual')">
+                  <span class="virtual-badge toggle-badge" :class="point.isVirtual === 1 ? 'virtual-yes' : 'virtual-no'">
                     {{ point.isVirtual === 1 ? '是' : '否' }}
                   </span>
                 </td>
-                <td class="point-source">{{ point.sourcePointCodes || '--' }}</td>
-                <td class="point-expression">{{ point.calculationExpression || '--' }}</td>
-                <td class="point-desc" :title="point.description">{{ point.description }}</td>
+
+                <!-- 源点值：文本输入 -->
+                <td class="point-source" @click="startInlineEdit(point, 'sourcePointCodes')">
+                  <input v-if="isEditing(point, 'sourcePointCodes')" v-model="inlineEditValue" class="inline-edit-input" @blur="saveInlineEdit(point, 'sourcePointCodes')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
+                  <div v-else class="cell-editable">{{ point.sourcePointCodes || '--' }}</div>
+                </td>
+
+                <!-- 计算表达式：文本输入 -->
+                <td class="point-expression" @click="startInlineEdit(point, 'calculationExpression')">
+                  <input v-if="isEditing(point, 'calculationExpression')" v-model="inlineEditValue" class="inline-edit-input" @blur="saveInlineEdit(point, 'calculationExpression')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
+                  <div v-else class="cell-editable">{{ point.calculationExpression || '--' }}</div>
+                </td>
+
+                <!-- 描述：文本输入 -->
+                <td @click="startInlineEdit(point, 'description')">
+                  <input v-if="isEditing(point, 'description')" v-model="inlineEditValue" class="inline-edit-input" @blur="saveInlineEdit(point, 'description')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
+                  <div v-else class="cell-editable point-desc" :title="point.description">{{ point.description || '--' }}</div>
+                </td>
+
                 <td>{{ formatDateTime(point.updatedTime) }}</td>
                 <td class="fixed-column-action">
                   <!-- 添加固定列类 -->
@@ -217,8 +313,8 @@
           </table>
         </div>
 
-        <!-- 分页控制 -->
-        <div v-if="points.length > 0" class="pagination-controls">
+        <!-- 分页控制（固定底部） -->
+        <div v-if="points.length > 0" class="pagination-controls pagination-fixed">
           <div class="page-info">
             <span>第</span>
             <input
@@ -720,19 +816,19 @@
               </div>
             </div>
 
-            <div class="dialog-footer">
-              <button type="button" class="btn btn-outline" @click="closeGroupDialog">取消</button>
-              <button type="submit" class="btn btn-primary">预览生成点位</button>
-              <button
-                type="button"
-                class="btn btn-success"
-                @click="savePointGroup"
-                :disabled="previewPoints.length === 0"
-              >
-                确认生成点位
-              </button>
-            </div>
           </form>
+        </div>
+        <div class="dialog-footer">
+          <button type="button" class="btn btn-outline" @click="closeGroupDialog">取消</button>
+          <button type="button" class="btn btn-primary" @click="generatePreview">预览生成点位</button>
+          <button
+            type="button"
+            class="btn btn-success"
+            @click="savePointGroup"
+            :disabled="previewPoints.length === 0"
+          >
+            确认生成点位
+          </button>
         </div>
       </div>
     </div>
@@ -741,8 +837,11 @@
 
 <script>
 import axios from 'axios'
+import { protocolMixin, dataTypeOptions, formatDataType } from './protocolMixin.js'
+
 export default {
   name: 'ModbusProtocol',
+  mixins: [protocolMixin],
   props: {
     templateId: {
       type: [String, Number],
@@ -755,19 +854,8 @@ export default {
   },
   data() {
     return {
-      // 点位数据
-      loading: false,
-      error: '',
-      allPoints: [],
-      filteredPoints: [],
-      points: [],
-      selectedPoints: [],
-      selectAll: false,
-      totalItems: 0,
-      totalPages: 1,
+      tableMaxHeight: 500,
 
-      // 搜索和筛选
-      searchText: '',
       filters: {
         status: '',
         functionCode: '',
@@ -777,13 +865,15 @@ export default {
         isVirtual: '',
       },
 
-      // 分页
-      currentPage: 1,
-      pageSize: 10,
+      // 分页（从 mixin 继承）
+      // currentPage, pageSize, totalItems, totalPages
+
+      // 行内编辑
+      inlineEditId: null,
+      inlineEditField: null,
+      inlineEditValue: '',
 
       // 点位对话框
-      showDialog: false,
-      editingPoint: null,
       pointForm: {
         id: null,
         modelId: null,
@@ -842,69 +932,8 @@ export default {
     }
   },
   computed: {
-    // 统一的数据类型选项
     dataTypeOptions() {
-      return [
-        { value: 'boolean', label: 'BOOL' },
-        { value: 'bit', label: 'BIT (自动生成BIT0-BIT15)' },
-        { value: 'bit0', label: 'BIT0' },
-        { value: 'bit1', label: 'BIT1' },
-        { value: 'bit2', label: 'BIT2' },
-        { value: 'bit3', label: 'BIT3' },
-        { value: 'bit4', label: 'BIT4' },
-        { value: 'bit5', label: 'BIT5' },
-        { value: 'bit6', label: 'BIT6' },
-        { value: 'bit7', label: 'BIT7' },
-        { value: 'bit8', label: 'BIT8' },
-        { value: 'bit9', label: 'BIT9' },
-        { value: 'bit10', label: 'BIT10' },
-        { value: 'bit11', label: 'BIT11' },
-        { value: 'bit12', label: 'BIT12' },
-        { value: 'bit13', label: 'BIT13' },
-        { value: 'bit14', label: 'BIT14' },
-        { value: 'bit15', label: 'BIT15' },
-        { value: 'int16', label: 'INT16' },
-        { value: 'uint16', label: 'UINT16' },
-        { value: 'int32', label: 'INT32' },
-        { value: 'uint32', label: 'UINT32' },
-        { value: 'float', label: 'FLOAT' },
-        { value: 'double', label: 'DOUBLE' },
-      ]
-    },
-
-    hasSearchFilter() {
-      return (
-        this.searchText.trim() !== '' ||
-        this.filters.status !== '' ||
-        this.filters.functionCode !== '' ||
-        this.filters.dataType !== '' ||
-        this.filters.isControl !== '' ||
-        this.filters.isWarnPoint !== '' ||
-        this.filters.isVirtual !== ''
-      )
-    },
-
-    pageNumbers() {
-      const pages = []
-      const maxPages = 5
-
-      if (this.totalPages <= maxPages) {
-        for (let i = 1; i <= this.totalPages; i++) {
-          pages.push(i)
-        }
-      } else {
-        let start = Math.max(1, this.currentPage - 2)
-        let end = Math.min(this.totalPages, start + maxPages - 1)
-
-        if (end - start < maxPages - 1) {
-          start = Math.max(1, end - maxPages + 1)
-        }
-
-        for (let i = start; i <= end; i++) {
-          pages.push(i)
-        }
-      }
-      return pages
+      return dataTypeOptions
     },
 
     // 数据类型与地址间隔的映射关系
@@ -1032,7 +1061,7 @@ export default {
           'bit15',
         ],
 
-        3: ['int16', 'uint16', 'int32', 'uint32', 'float', 'double'],
+        3: ['int16', 'uint16', 'int32', 'uint32', 'float', 'double', 'boolean', 'bit', 'bit0', 'bit1', 'bit2', 'bit3', 'bit4', 'bit5', 'bit6', 'bit7', 'bit8', 'bit9', 'bit10', 'bit11', 'bit12', 'bit13', 'bit14', 'bit15'],
         4: ['int16', 'uint16', 'int32', 'uint32', 'float', 'double'],
         6: ['int16', 'uint16', 'int32', 'uint32', 'float', 'double'],
         16: ['int16', 'uint16', 'int32', 'uint32', 'float', 'double'],
@@ -1040,10 +1069,6 @@ export default {
     },
   },
 
-  created() {
-    this.pointForm.modelId = Number(this.templateId)
-    this.loadPoints()
-  },
   watch: {
     filters: {
       handler() {
@@ -1051,24 +1076,23 @@ export default {
       },
       deep: true,
     },
-    searchText() {
-      this.applyFilters()
-    },
   },
+  created() {
+    this.pointForm.modelId = Number(this.templateId)
+    this.loadPoints()
+    this.calcTableHeight()
+    window.addEventListener('resize', this.calcTableHeight)
+  },
+
+  beforeDestroy() {
+    window.removeEventListener('resize', this.calcTableHeight)
+  },
+
   methods: {
-    // 格式化数据类型显示
-    formatDataType(dataType) {
-      if (!dataType) return '--'
+    formatDataType,
 
-      // 查找对应的显示标签
-      const option = this.dataTypeOptions.find((opt) => opt.value === dataType)
-      if (option) {
-        // 只返回简短的标签，去掉括号里的说明
-        return option.label.split('(')[0].trim()
-      }
-
-      // 如果没有找到，返回原始值
-      return dataType.toUpperCase()
+    calcTableHeight() {
+      this.tableMaxHeight = Math.max(300, window.innerHeight - 380)
     },
 
     async loadPoints() {
@@ -1081,7 +1105,7 @@ export default {
       try {
         const requestData = {
           model_id: Number(this.templateId),
-          size: 100,
+          size: 10000,
           current: 1,
           start_address: 0,
         }
@@ -1168,36 +1192,6 @@ export default {
       this.updatePagination()
     },
 
-    updatePagination() {
-      this.currentPage = 1
-      this.totalItems = this.filteredPoints.length
-      this.totalPages = Math.max(1, Math.ceil(this.totalItems / this.pageSize))
-      this.updateCurrentPageData()
-    },
-
-    updateCurrentPageData() {
-      if (this.filteredPoints.length === 0) {
-        this.points = []
-        return
-      }
-
-      const startIndex = (this.currentPage - 1) * this.pageSize
-      const endIndex = Math.min(startIndex + this.pageSize, this.filteredPoints.length)
-      this.points = this.filteredPoints.slice(startIndex, endIndex)
-
-      // 确保当前页码不超过总页数
-      if (this.currentPage > this.totalPages && this.totalPages > 0) {
-        this.currentPage = this.totalPages
-        this.updateCurrentPageData()
-      }
-    },
-
-    changePage() {
-      // 确保页码在有效范围内
-      this.currentPage = Math.max(1, Math.min(this.currentPage, this.totalPages))
-      this.updateCurrentPageData()
-    },
-
     transformPoints(records) {
       if (!records || !Array.isArray(records)) {
         return []
@@ -1232,42 +1226,6 @@ export default {
       })
     },
 
-    handleApiError(err) {
-      if (err.response) {
-        const status = err.response.status
-        if (status === 404) {
-          this.error = '请求的资源不存在'
-        } else if (status === 401) {
-          this.error = '未授权，请重新登录'
-        } else if (status === 500) {
-          this.error = '服务器内部错误'
-        } else {
-          this.error = `请求失败 (${status}): ${err.response.data?.message || err.message}`
-        }
-      } else if (err.request) {
-        this.error = '网络错误，请检查网络连接'
-      } else {
-        this.error = err.message || '加载点位数据失败，请稍后重试'
-      }
-    },
-
-    formatByteOrder(byteOrder) {
-      const map = {
-        big_endian: '大端模式',
-        little_endian: '小端模式',
-      }
-      return map[byteOrder] || byteOrder || '--'
-    },
-
-    formatDateTime(dateTime) {
-      if (!dateTime) return '--'
-      try {
-        return dateTime
-      } catch (e) {
-        return '--'
-      }
-    },
-
     resetSearch() {
       this.searchText = ''
       this.filters = {
@@ -1277,47 +1235,6 @@ export default {
         isControl: '',
         isWarnPoint: '',
         isVirtual: '',
-      }
-    },
-
-    toggleSelectAll() {
-      if (this.selectAll) {
-        this.selectedPoints = this.points.map((point) => point.id)
-      } else {
-        this.selectedPoints = []
-      }
-    },
-
-    changePageSize() {
-      // 计算新的总页数
-      this.totalPages = Math.max(1, Math.ceil(this.totalItems / this.pageSize))
-
-      // 如果当前页码大于新的总页数，重置到最后一页
-      if (this.currentPage > this.totalPages && this.totalPages > 0) {
-        this.currentPage = this.totalPages
-      }
-
-      this.updateCurrentPageData()
-    },
-
-    prevPage() {
-      if (this.currentPage > 1) {
-        this.currentPage--
-        this.updateCurrentPageData()
-      }
-    },
-
-    nextPage() {
-      if (this.currentPage < this.totalPages) {
-        this.currentPage++
-        this.updateCurrentPageData()
-      }
-    },
-
-    goToPage(page) {
-      if (page >= 1 && page <= this.totalPages) {
-        this.currentPage = page
-        this.updateCurrentPageData()
       }
     },
 
@@ -1355,12 +1272,6 @@ export default {
         calculationExpression: point.calculationExpression || null,
       }
       this.showDialog = true
-    },
-
-    closeDialog() {
-      this.showDialog = false
-      this.editingPoint = null
-      this.resetPointForm()
     },
 
     resetPointForm() {
@@ -1479,53 +1390,6 @@ export default {
         const errorMessage = this.extractHttpErrorMessage(err, this.editingPoint)
         this.$message.error(errorMessage)
       }
-    },
-
-    // 从API响应中提取错误信息
-    extractApiErrorMessage(errorData, isEdit = false) {
-      const action = isEdit ? '更新' : '创建'
-
-      if (errorData && errorData.code === 400) {
-        const errorMsg = errorData.data?.error || errorData.message || `${action}失败`
-        return `${action}失败: ${errorMsg}`
-      }
-
-      return `${action}失败: ${errorData?.message || '未知错误'}`
-    },
-
-    // 从HTTP异常中提取错误信息
-    extractHttpErrorMessage(err, isEdit = false) {
-      const action = isEdit ? '更新' : '创建'
-
-      if (err.response) {
-        const status = err.response.status
-        const errorData = err.response.data
-
-        if (status === 400) {
-          const errorMsg = errorData?.data?.error || errorData?.message || `${action}失败`
-          return `${action}失败: ${errorMsg}`
-        }
-
-        if (status === 500) {
-          return `${action}失败: 服务器内部错误，请稍后重试`
-        }
-
-        const statusMessages = {
-          401: '未授权，请重新登录',
-          403: '权限不足',
-          404: '资源不存在',
-          409: '资源冲突',
-        }
-
-        const statusMessage = statusMessages[status] || `HTTP错误 (${status})`
-        return `${action}失败: ${errorData?.message || statusMessage}`
-      }
-
-      if (err.request) {
-        return `${action}失败: 网络错误，请检查网络连接`
-      }
-
-      return `${action}失败: ${err.message || '未知错误'}`
     },
 
     // 新增点位组相关方法
@@ -1726,8 +1590,8 @@ export default {
 
       for (let i = 0; i < this.pointGroupForm.memberCount; i++) {
         // 生成点位代码和名称
-        const pointCode = `${baseCode}_${String(i + 1).padStart(3, '0')}`
-        const pointName = `${baseName}${i + 1}`
+        const pointCode = `${baseCode}_${String(i).padStart(3, '0')}`
+        const pointName = `${baseName}${i}`
 
         // 计算地址
         const address = this.pointGroupForm.startAddress + i * this.pointGroupForm.addressInterval
@@ -1750,7 +1614,7 @@ export default {
           point_code: pointCode,
           point_name: pointName,
           is_active: this.pointGroupForm.status,
-          description: `${baseName}第${i + 1}个点位`,
+          description: `${baseName}第${i}个点位`,
           address: address,
           is_control: this.pointGroupForm.isControl,
           function_code: Number(this.pointGroupForm.functionCode),
@@ -1835,11 +1699,131 @@ export default {
           this.closeGroupDialog()
           await this.loadPoints()
         } else {
-          throw new Error(response.data?.message || '创建点位组失败')
+          const resData = response.data?.data
+          let msg = response.data?.message || '创建点位组失败'
+          if (resData?.error) msg += `：${resData.error}`
+          if (resData?.partial_success_count != null) msg += `（已成功 ${resData.partial_success_count} 个）`
+          this.$message.error(msg)
         }
       } catch (err) {
         console.error('创建点位组失败:', err)
-        this.$message.error('创建失败: ' + (err.message || '未知错误'))
+        const resData = err.response?.data?.data
+        let msg = err.response?.data?.message || err.message || '未知错误'
+        if (resData?.error) msg += `：${resData.error}`
+        if (resData?.partial_success_count != null) msg += `（已成功 ${resData.partial_success_count} 个）`
+        this.$message.error('创建失败: ' + msg)
+      }
+    },
+
+    isEditing(point, field) {
+      return this.inlineEditId === point.id && this.inlineEditField === field
+    },
+
+    startInlineEdit(point, field) {
+      if (this.inlineEditId === point.id && this.inlineEditField === field) return
+      this.inlineEditId = point.id
+      this.inlineEditField = field
+      this.inlineEditValue = point[field]
+      this.$nextTick(() => {
+        const el = this.$refs.inlineInput
+        if (el) {
+          const target = Array.isArray(el) ? el[0] : el
+          target.focus()
+          if (target.select) target.select()
+        }
+      })
+    },
+
+    cancelInlineEdit() {
+      this.inlineEditId = null
+      this.inlineEditField = null
+      this.inlineEditValue = ''
+    },
+
+    buildPointPayload(point) {
+      return {
+        id: point.id,
+        model_id: Number(this.templateId),
+        point_code: point.pointCode,
+        point_name: point.pointName,
+        is_active: point.isActive,
+        description: point.description || '',
+        address: point.address,
+        is_control: point.isControl || 0,
+        function_code: point.functionCode,
+        data_type: point.dataType,
+        scale_factor: point.scaleFactor || 1.0,
+        offset: point.offset || 0.0,
+        engineering_unit: point.engineeringUnit || '',
+        precision: point.precision || 0,
+        byte_order: point.byteOrder,
+        min_value: point.minValue || 0,
+        max_value: point.maxValue || 0,
+        is_warn_point: point.isWarnPoint || 0,
+        warning_low: point.warningLow || null,
+        warning_high: point.warningHigh || null,
+        is_virtual: point.isVirtual || 0,
+        source_point_codes: point.sourcePointCodes || '',
+        calculation_expression: point.calculationExpression || '',
+        updated_time: null,
+      }
+    },
+
+    async saveInlineEdit(point, field) {
+      const newVal = typeof this.inlineEditValue === 'string' ? this.inlineEditValue.trim() : this.inlineEditValue
+      const oldVal = point[field]
+      this.inlineEditId = null
+      this.inlineEditField = null
+      if (newVal === oldVal || (typeof newVal === 'string' && newVal === '' && !oldVal)) return
+
+      point[field] = newVal
+      try {
+        const response = await axios.put('/api/device/model_detail_modbus', { points: [this.buildPointPayload(point)] })
+        if (response.data && response.data.code === 200) {
+          this.$message.success('已更新')
+        } else {
+          point[field] = oldVal
+          this.$message.error(response.data?.message || '更新失败')
+        }
+      } catch (err) {
+        point[field] = oldVal
+        this.$message.error('更新失败: ' + (err.response?.data?.message || err.message))
+      }
+    },
+
+    async toggleField(point, field) {
+      const oldVal = point[field]
+      point[field] = oldVal === 1 ? 0 : 1
+      try {
+        const response = await axios.put('/api/device/model_detail_modbus', { points: [this.buildPointPayload(point)] })
+        if (response.data && response.data.code === 200) {
+          this.$message.success('已更新')
+        } else {
+          point[field] = oldVal
+          this.$message.error(response.data?.message || '更新失败')
+        }
+      } catch (err) {
+        point[field] = oldVal
+        this.$message.error('更新失败: ' + (err.response?.data?.message || err.message))
+      }
+    },
+
+    async stepPrecision(point, delta) {
+      const oldVal = point.precision
+      const newVal = Math.max(0, oldVal + delta)
+      if (newVal === oldVal) return
+      point.precision = newVal
+      try {
+        const response = await axios.put('/api/device/model_detail_modbus', { points: [this.buildPointPayload(point)] })
+        if (response.data && response.data.code === 200) {
+          this.$message.success('已更新')
+        } else {
+          point.precision = oldVal
+          this.$message.error(response.data?.message || '更新失败')
+        }
+      } catch (err) {
+        point.precision = oldVal
+        this.$message.error('更新失败: ' + (err.response?.data?.message || err.message))
       }
     },
 
@@ -2240,11 +2224,13 @@ export default {
 </script>
 
 <style scoped>
+@import './protocolCommon.css';
+
+/* Modbus 协议特有样式 */
 .modbus-protocol-config {
   width: 100%;
 }
 
-/* Modbus点位配置区域 */
 .modbus-points-config {
   background: white;
   border-radius: 8px;
@@ -2252,508 +2238,21 @@ export default {
   overflow: hidden;
 }
 
-/* 搜索栏 */
-.search-bar {
-  display: flex;
-  margin-bottom: 20px;
-  padding: 20px 20px 0;
-}
-
-.search-input {
-  flex: 1;
-  padding: 10px 15px;
-  border: 1px solid #ddd;
-  border-radius: 5px 0 0 5px;
-  font-size: 16px;
-}
-
-.search-btn {
-  padding: 10px 20px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 0 5px 5px 0;
-  cursor: pointer;
-}
-
-/* 筛选栏 */
-.filter-bar {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
-  padding: 0 20px;
-  flex-wrap: wrap;
-}
-
-.filter-select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  background-color: white;
-  min-width: 150px;
-}
-
-/* 操作栏 */
-.action-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: 0 20px;
-}
-
-.action-left,
-.action-right {
-  display: flex;
-  gap: 10px;
-}
-
-.btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-primary {
-  background-color: #3498db;
-  color: white;
-}
-
-.btn-outline {
-  background-color: transparent;
-  border: 1px solid #95a5a6;
-  color: #34495e;
-}
-
-.btn-danger {
-  background-color: #e74c3c;
-  color: white;
-}
-
-.btn-success {
-  background-color: #2ecc71;
-  color: white;
-}
-
-.btn:hover {
-  opacity: 0.9;
-}
-
-/* 点位列表样式 */
-.points-container {
-  padding: 0 20px;
-}
-
-.table-container {
-  overflow-x: auto;
-  width: 100%;
-  position: relative;
-}
-
 .points-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 1600px; /* 确保表格足够宽 */
-}
-
-.points-table th {
-  background-color: #f8f9fa;
-  padding: 15px 12px;
-  text-align: left;
-  font-weight: 600;
-  color: #2c3e50;
-  border-bottom: 2px solid #e0e0e0;
-  white-space: nowrap;
-}
-
-.points-table td {
-  padding: 15px 12px;
-  border-bottom: 1px solid #f0f0f0;
-  white-space: nowrap;
-}
-
-.points-table tr:hover {
-  background-color: #f8f9fa;
-}
-
-.point-name {
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.point-desc {
-  color: #95a5a6;
-  font-size: 14px;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.table-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.action-link {
-  color: #3498db;
-  text-decoration: none;
-  cursor: pointer;
-  font-size: 14px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background-color 0.3s;
-}
-
-.action-link:hover {
-  background-color: #f0f0f0;
-  text-decoration: none;
-}
-
-.action-link.delete {
-  color: #e74c3c;
-}
-
-/* 状态标签 */
-.status-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: bold;
-  white-space: nowrap;
-}
-
-.status-active {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.status-inactive {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-/* 可控字段样式 */
-.control-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: bold;
-  white-space: nowrap;
-  transition: all 0.3s;
-}
-
-.control-enabled {
-  background-color: #d4edda; /* 绿色背景 */
-  color: #155724; /* 深绿色文字 */
-  border: 1px solid #c3e6cb;
-}
-
-.control-enabled:hover {
-  background-color: #c3e6cb;
-  box-shadow: 0 2px 4px rgba(52, 152, 219, 0.2);
-}
-
-.control-disabled {
-  background-color: #f8d7da; /* 红色背景 */
-  color: #721c24; /* 深红色文字 */
-  border: 1px solid #f5c6cb;
-}
-
-.control-disabled:hover {
-  background-color: #f5c6cb;
-  box-shadow: 0 2px 4px rgba(231, 76, 60, 0.2);
-}
-
-/* 报警点样式 */
-.warn-badge {
-  display: inline-block;
-  padding: 3px 8px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.warn-yes {
-  background-color: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeaa7;
-}
-
-.warn-no {
-  background-color: #e2e3e5;
-  color: #383d41;
-  border: 1px solid #d6d8db;
-}
-
-/* 虚拟点位样式 */
-.virtual-badge {
-  display: inline-block;
-  padding: 3px 8px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.virtual-yes {
-  background-color: #d1ecf1;
-  color: #0c5460;
-  border: 1px solid #bee5eb;
-}
-
-.virtual-no {
-  background-color: #e2e3e5;
-  color: #383d41;
-  border: 1px solid #d6d8db;
-}
-
-/* 分页控制样式 */
-.pagination-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-top: 1px solid #e0e0e0;
-}
-
-.page-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.page-input {
-  width: 60px;
-  padding: 5px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  text-align: center;
-}
-
-.page-size-select {
-  padding: 5px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-/* 分页样式 */
-.pagination {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-
-.page-btn {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  background-color: white;
-  cursor: pointer;
-  border-radius: 5px;
-}
-
-.page-btn.active {
-  background-color: #3498db;
-  color: white;
-  border-color: #3498db;
-}
-
-/* 批量操作 */
-.batch-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #e3f2fd;
-  border-radius: 6px;
-}
-
-.batch-actions span {
-  font-weight: 500;
-  color: #1976d2;
-}
-
-.batch-buttons {
-  display: flex;
-  gap: 10px;
-}
-
-/* 加载状态 */
-.loading-state,
-.error-state,
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 300px;
-  text-align: center;
-  padding: 40px;
-}
-
-.loading-state .spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #3498db;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 15px;
-}
-
-.error-state i {
-  font-size: 48px;
-  color: #e74c3c;
-  margin-bottom: 15px;
-}
-
-.error-state h3 {
-  margin-bottom: 10px;
-  color: #e74c3c;
-}
-
-.empty-state i {
-  font-size: 64px;
-  color: #95a5a6;
-  margin-bottom: 20px;
-}
-
-.empty-state h3 {
-  margin-bottom: 10px;
-  color: #2c3e50;
-}
-
-.empty-state p {
-  color: #7f8c8d;
-  margin-bottom: 20px;
-}
-
-/* 对话框样式 */
-.dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-
-.dialog-content {
-  background: white;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 800px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  min-width: 1600px;
 }
 
 .dialog-content.dialog-large {
   max-width: 900px;
 }
 
-.dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
+.point-source,
+.point-expression {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
-.dialog-header h3 {
-  margin: 0;
-  font-size: 18px;
-  color: #2c3e50;
-}
-
-.dialog-close {
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  color: #95a5a6;
-  padding: 5px;
-  border-radius: 4px;
-}
-
-.dialog-close:hover {
-  background-color: #f8f9fa;
-  color: #e74c3c;
-}
-
-.dialog-body {
-  padding: 20px;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group.full-width {
-  grid-column: 1 / -1;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #34495e;
-  font-size: 14px;
-}
-
-.form-group .required {
-  color: #e74c3c;
-  margin-right: 4px;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  color: #34495e;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
-}
-
-.dialog-footer {
-  padding: 20px;
-  border-top: 1px solid #e0e0e0;
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-/* 表单区域样式 */
 .form-section {
   margin-bottom: 25px;
   padding-bottom: 20px;
@@ -2834,146 +2333,134 @@ export default {
   padding: 12px !important;
 }
 
-/* 滚动条样式 */
-.table-container::-webkit-scrollbar,
-.preview-table-container::-webkit-scrollbar {
-  height: 8px;
-}
-
-.table-container::-webkit-scrollbar-track,
-.preview-table-container::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.table-container::-webkit-scrollbar-thumb,
-.preview-table-container::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-
-.table-container::-webkit-scrollbar-thumb:hover,
-.preview-table-container::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-.dialog-content::-webkit-scrollbar {
-  width: 8px;
-}
-
-.dialog-content::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.dialog-content::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-
-.dialog-content::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-/* 添加固定列的CSS样式 */
-.points-table {
-  position: relative;
+.form-control {
   width: 100%;
-  border-collapse: collapse;
-  min-width: 1600px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
-/* 操作列固定在右侧的样式 */
-.fixed-column-action {
-  position: sticky;
-  right: 0; /* 固定在右侧 */
+.hint-text {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.preview-summary {
+  padding: 15px;
   background-color: #f8f9fa;
-  z-index: 10;
-  border-left: 2px solid #e0e0e0; /* 注意这里是左边框，因为固定在右侧 */
+  border-top: 1px solid #e0e0e0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
 }
 
-/* 复选框列固定在左侧的样式 */
-.points-table th:first-child,
-.points-table td:first-child {
-  position: sticky;
-  left: 0;
-  background-color: #f8f9fa;
-  z-index: 20;
-  border-right: 1px solid #e0e0e0; /* 右边框 */
+.summary-item {
+  display: flex;
+  justify-content: space-between;
 }
 
-/* 操作列在表头中的样式 */
-.points-table th.fixed-column-action {
-  z-index: 15; /* 比第一列低，但比其他列高 */
+.summary-item .label {
+  font-weight: 500;
+  color: #6c757d;
 }
 
-/* 操作列在数据行中的样式 */
-.points-table td.fixed-column-action {
-  background-color: white;
-  z-index: 5;
+.summary-item .value {
+  font-weight: 600;
+  color: #2c3e50;
 }
 
-/* 鼠标悬停时保持背景色 */
-.points-table tr:hover td.fixed-column-action {
-  background-color: #f8f9fa;
+.virtual-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
 }
 
-/* 确保复选框列在鼠标悬停时也变色 */
-.points-table tr:hover td:first-child {
-  background-color: #f8f9fa;
+.virtual-yes {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
 }
 
-/* 操作列应该是左边阴影 */
-.points-table th.fixed-column-action::before,
-.points-table td.fixed-column-action::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -2px; /* 左边阴影 */
-  height: 100%;
-  width: 2px;
-  background-color: #e0e0e0;
-  box-shadow: -2px 0 3px rgba(0, 0, 0, 0.1);
+.virtual-no {
+  background-color: #e2e3e5;
+  color: #383d41;
+  border: 1px solid #d6d8db;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
+.cell-editable {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  min-height: 20px;
+}
 
-  .filter-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
+.cell-editable:hover {
+  border-color: #3498db;
+  background-color: #f0f8ff;
+}
 
-  .filter-select {
-    width: 100%;
-  }
+.toggle-badge {
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.15s;
+}
 
-  .action-bar {
-    flex-direction: column;
-    gap: 10px;
-  }
+.toggle-badge:hover {
+  opacity: 0.7;
+}
 
-  .action-left,
-  .action-right {
-    width: 100%;
-    justify-content: center;
-  }
+.inline-edit-input,
+.inline-edit-select {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid #3498db;
+  border-radius: 3px;
+  font-size: 13px;
+  color: #2c3e50;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
 
-  .dialog-content.dialog-large {
-    width: 95%;
-    max-width: 95%;
-  }
+.precision-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stepper-btn {
+  width: 22px;
+  height: 22px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background: #f8f9fa;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.stepper-btn:hover:not(:disabled) {
+  background: #e9ecef;
+  border-color: #3498db;
+}
+
+.stepper-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stepper-value {
+  min-width: 20px;
+  text-align: center;
+  font-weight: 600;
 }
 </style>
