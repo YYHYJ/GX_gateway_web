@@ -140,22 +140,42 @@ export default {
       this.loadInterfaces()
     },
 
+    buildPayload(formData, force = false) {
+      const payload = { name: this.activeIfaceName, mode: formData.mode }
+      if (formData.mode === 'static') {
+        Object.assign(payload, {
+          ip_address: formData.ipAddress,
+          subnet_mask: formData.subnetMask,
+          gateway: formData.gateway,
+          dns1: formData.dns1,
+          dns2: formData.dns2,
+        })
+      }
+      if (force) payload.force = true
+      return payload
+    },
+
     async saveConfig(formData) {
       this.saving = true
       try {
-        const payload = {
-          name: this.activeIfaceName,
-          mode: formData.mode,
-          ip_address: formData.mode === 'static' ? formData.ipAddress : '',
-          subnet_mask: formData.mode === 'static' ? formData.subnetMask : '',
-          gateway: formData.mode === 'static' ? formData.gateway : '',
-          dns1: formData.mode === 'static' ? formData.dns1 : '',
-          dns2: formData.mode === 'static' ? formData.dns2 : '',
-        }
-        const res = await updateInterface(payload)
+        const res = await updateInterface(this.buildPayload(formData))
         if (res.code === 200) {
           alert('网络配置保存成功')
           await this.loadInterfaces()
+        } else if (res.code === 'CONFLICT') {
+          const d = res.data || {}
+          const yes = confirm(
+            `网关冲突：接口 ${d.conflict_iface} 已存在默认路由，是否强制覆盖为新网关 ${d.new_gateway}？`,
+          )
+          if (yes) {
+            const res2 = await updateInterface(this.buildPayload(formData, true))
+            if (res2.code === 200) {
+              alert('网络配置保存成功')
+              await this.loadInterfaces()
+            } else {
+              alert('保存失败: ' + (res2.message || '未知错误'))
+            }
+          }
         } else {
           alert('保存失败: ' + (res.message || '未知错误'))
         }
@@ -199,8 +219,21 @@ export default {
             metric: formData.metric,
             remark: formData.remark,
           })
-        } else if (formData._editKey) {
-          res = await updateRoute(formData)
+        } else if (formData._isEdit) {
+          res = await updateRoute({
+            old_route: {
+              destination: formData._oldRoute.destination,
+              netmask: formData._oldRoute.netmask,
+            },
+            new_route: {
+              destination: formData.destination,
+              netmask: formData.netmask,
+              gateway: formData.gateway,
+              iface: formData.iface,
+              metric: formData.metric,
+              remark: formData.remark,
+            },
+          })
         } else {
           res = await addRoute(formData)
         }

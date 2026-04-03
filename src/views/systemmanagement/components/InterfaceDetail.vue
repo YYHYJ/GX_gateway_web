@@ -58,11 +58,11 @@
             </div>
             <div class="form-group">
               <label>首选 DNS</label>
-              <input type="text" class="form-control" v-model="form.dns1" placeholder="例如: 8.8.8.8" />
+              <input type="text" class="form-control disabled" :value="form.dns1" disabled />
             </div>
             <div class="form-group">
               <label>备用 DNS</label>
-              <input type="text" class="form-control" v-model="form.dns2" placeholder="例如: 8.8.4.4" />
+              <input type="text" class="form-control disabled" :value="form.dns2" disabled />
             </div>
           </div>
         </div>
@@ -127,7 +127,7 @@ export default {
       immediate: true,
       handler(val) {
         if (!val || !val.name) return
-        this.form.mode = val.mode || 'dhcp'
+        this.form.mode = 'static'
         this.form.ipAddress = val.ip_address || ''
         this.form.subnetMask = val.subnet_mask || '255.255.255.0'
         this.form.gateway = val.gateway || ''
@@ -229,6 +229,13 @@ export default {
   opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;
+}
+
+.form-control.disabled {
+  background: #f0f2f5;
+  color: #999;
+  cursor: not-allowed;
+  border-color: #e1e5e9;
 }
 
 @media (max-width: 768px) {

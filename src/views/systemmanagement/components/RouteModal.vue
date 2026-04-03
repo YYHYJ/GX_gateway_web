@@ -140,11 +140,18 @@ export default {
         if (!this.validateIp(this.form.destination)) return alert('请输入有效的目标网段')
         if (!this.validateIp(this.form.netmask)) return alert('请输入有效的子网掩码')
       }
-      this.$emit('save', {
+      const payload = {
         ...this.form,
         isDefault: this.isDefault,
-        _editKey: this.isEdit && !this.isDefault,
-      })
+        _isEdit: this.isEdit && !this.isDefault,
+      }
+      if (payload._isEdit) {
+        payload._oldRoute = {
+          destination: this.route.destination,
+          netmask: this.route.netmask,
+        }
+      }
+      this.$emit('save', payload)
     },
   },
 }
