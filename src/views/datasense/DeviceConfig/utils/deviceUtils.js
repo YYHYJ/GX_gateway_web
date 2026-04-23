@@ -5,8 +5,12 @@ export const deviceStatus = {
     if (!device.is_enabled) {
       return 'offline'
     }
-    // 这里可以根据实际业务逻辑扩展
     return 'online'
+  },
+
+  // 根据实时状态更新设备状态
+  resolveStatus(connStatus) {
+    return connStatus === 'connected' ? 'online' : 'offline'
   },
 
   // 获取状态显示文本
@@ -14,7 +18,7 @@ export const deviceStatus = {
     const statusTexts = {
       online: '在线',
       offline: '离线',
-      fault: '故障',
+      fault: '异常',
       disabled: '禁用',
       warning: '警告',
     }

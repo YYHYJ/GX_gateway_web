@@ -2,7 +2,7 @@
   <!-- 侧边导航栏 -->
   <div class="sidebar">
     <div class="logo">
-      <i class="fas fa-network-wired"></i>
+      <img src="/favicon.ico" alt="logo" class="logo-img" />
       <h1>数据采集网关</h1>
     </div>
 
@@ -205,7 +205,9 @@ export default {
           return { parent: menu.id, child: null }
         }
         if (menu.children) {
-          for (const child of menu.children) {
+          // 按路径长度降序匹配，避免短路径前缀误匹配
+          const sorted = [...menu.children].sort((a, b) => (b.path?.length || 0) - (a.path?.length || 0))
+          for (const child of sorted) {
             if (child.path && path.startsWith(child.path)) {
               return { parent: menu.id, child: child.id }
             }
@@ -360,10 +362,10 @@ export default {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.logo i {
-  font-size: 32px;
+.logo-img {
+  width: 40px;
+  height: 40px;
   margin-bottom: 10px;
-  color: var(--secondary-color);
 }
 
 .logo h1 {

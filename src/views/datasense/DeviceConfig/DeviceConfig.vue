@@ -170,10 +170,14 @@ export default {
       showCreateModal: false,
       showEditModal: false,
       editingDeviceId: null,
+      statusPollingTimer: null,
     }
   },
   created() {
     this.init()
+  },
+  beforeUnmount() {
+    this.stopStatusPolling()
   },
   computed: {
     displayInstances() {
@@ -257,7 +261,6 @@ export default {
       if (data.code === 200 && data.data?.devices) {
         this.instances = data.data.devices.map((device) => {
           const formattedDevice = dataTransform.formatDeviceItem(device)
-          // 如果模板名称为空或默认值，使用共享服务获取
           if (!formattedDevice.template || formattedDevice.template === '未知模板') {
             formattedDevice.template = templateMapService.getTemplateName(device.model_id)
           }
@@ -265,8 +268,46 @@ export default {
         })
         this.filteredInstances = [...this.instances]
         this.updateTotalItems()
+        // 加载完设备列表后获取实时状态并启动轮询
+        this.fetchDeviceStatus()
+        this.startStatusPolling()
       } else {
         this.$message.error(data.message || '获取设备实例失败')
+      }
+    },
+
+    // 获取设备实时状态
+    async fetchDeviceStatus() {
+      try {
+        const res = await deviceService.getDeviceStatus()
+        if (res.code === 200 && Array.isArray(res.data)) {
+          const statusMap = new Map(res.data.map(s => [s.device_id, s]))
+          this.instances.forEach(inst => {
+            const s = statusMap.get(inst.id)
+            if (s) {
+              inst.status = deviceStatus.resolveStatus(s.conn_status)
+            }
+          })
+          this.filteredInstances = [...this.filteredInstances]
+        }
+      } catch (e) {
+        console.error('获取设备状态失败:', e)
+      }
+    },
+
+    startStatusPolling() {
+      this.stopStatusPolling()
+      this.statusPollingTimer = setInterval(() => {
+        if (this.instances.length > 0) {
+          this.fetchDeviceStatus()
+        }
+      }, 5000)
+    },
+
+    stopStatusPolling() {
+      if (this.statusPollingTimer) {
+        clearInterval(this.statusPollingTimer)
+        this.statusPollingTimer = null
       }
     },
 

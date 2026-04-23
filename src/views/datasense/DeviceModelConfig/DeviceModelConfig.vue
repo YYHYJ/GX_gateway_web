@@ -83,8 +83,8 @@
             @close="closeEditModal"
           />
 
-          <!-- 模板卡片容器 -->
-          <div class="cards-container">
+          <!-- 模板表格容器 -->
+          <div class="table-container">
             <!-- 加载状态 -->
             <div v-if="loadingProtocols || loadingTemplates" class="loading-state">
               <div class="spinner mb-3"></div>
@@ -98,81 +98,37 @@
               <p>点击"新建模板"按钮创建第一个设备模板</p>
             </div>
 
-            <!-- 模板卡片列表 -->
-            <div v-else class="cards-grid">
-              <div
-                v-for="template in filteredTemplates"
-                :key="template.id"
-                class="card template-card"
-                :class="`protocol-${template.protocol_type?.toLowerCase()}`"
-              >
-                <div class="card-header">
-                  <div>
-                    <!-- 使用 model_name 作为主标题 -->
-                    <div class="card-title">
-                      <i :class="getProtocolIcon(template.protocol_type)"></i>
-                      {{ template.model_name || '--' }}
+            <!-- 模板表格 -->
+            <table v-else class="template-table">
+              <thead>
+                <tr>
+                  <th>模板ID</th>
+                  <th>模板名称</th>
+                  <th>制造商</th>
+                  <th>协议类型</th>
+                  <th>描述</th>
+                  <th>最后修改</th>
+                  <th class="fixed-column-action">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="template in filteredTemplates" :key="template.id">
+                  <td>{{ template.id || '--' }}</td>
+                  <td class="template-name-cell">{{ template.model_name || '--' }}</td>
+                  <td>{{ template.manufacturer || '--' }}</td>
+                  <td>{{ getProtocolDisplayName(template.protocol_type) }}</td>
+                  <td class="desc-cell">{{ template.description || '--' }}</td>
+                  <td>{{ formatDate(template.last_modified || template.created_at) || '--' }}</td>
+                  <td class="fixed-column-action">
+                    <div class="table-actions">
+                      <a class="action-link" @click="goToCommunicationSpec(template)">通信规约</a>
+                      <a class="action-link" @click="editTemplate(template.id)">编辑</a>
+                      <a class="action-link delete" @click="showDeleteConfirm(template)">删除</a>
                     </div>
-                    <div class="template-manufacturer">{{ template.manufacturer || '--' }}</div>
-                    <span class="status-badge protocol-badge">{{
-                      getProtocolDisplayName(template.protocol_type)
-                    }}</span>
-                  </div>
-                </div>
-
-                <div class="card-content">
-                  <div class="template-desc">{{ template.description || '--' }}</div>
-
-                  <div class="info-grid cols-2 template-stats">
-                    <div class="info-item">
-                      <div class="info-label">模板ID:</div>
-                      <div class="info-value">{{ template.id || '--' }}</div>
-                    </div>
-                    <div class="info-item">
-                      <div class="info-label">制造商:</div>
-                      <div class="info-value">{{ template.manufacturer || '--' }}</div>
-                    </div>
-                    <div class="info-item">
-                      <div class="info-label">协议类型:</div>
-                      <div class="info-value">
-                        {{ getProtocolDisplayName(template.protocol_type) }}
-                      </div>
-                    </div>
-                    <div class="info-item">
-                      <div class="info-label">创建时间:</div>
-                      <div class="info-value">{{ formatDate(template.created_at) || '--' }}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="card-footer">
-                  <div class="create-time">
-                    最后修改:
-                    {{ formatDate(template.last_modified || template.created_at) || '--' }}
-                  </div>
-                  <div class="d-flex gap-2">
-                    <button
-                      class="action-btn btn btn-outline btn-sm"
-                      @click="goToCommunicationSpec(template)"
-                    >
-                      <i class="fas fa-cog"></i> 通信规约
-                    </button>
-                    <button
-                      class="action-btn btn btn-outline btn-sm"
-                      @click="editTemplate(template.id)"
-                    >
-                      <i class="fas fa-edit"></i> 编辑
-                    </button>
-                    <button
-                      class="action-btn btn btn-outline btn-sm"
-                      @click="showDeleteConfirm(template)"
-                    >
-                      <i class="fas fa-trash"></i> 删除
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -578,78 +534,95 @@ export default {
   max-width: 400px;
 }
 
-/* 模板卡片特有样式 */
-.cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: 20px;
+/* 模板表格样式 */
+.table-container {
+  overflow-x: auto;
+  width: 100%;
+  position: relative;
 }
 
-.template-card {
-  border-left: 4px solid var(--secondary-color);
+.template-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.template-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-md);
-}
-
-.card-title {
-  font-size: 18px;
+.template-table th {
+  background-color: #f8f9fa;
+  padding: 15px 12px;
+  text-align: left;
   font-weight: 600;
-  color: var(--primary-color);
+  color: #2c3e50;
+  border-bottom: 2px solid #e0e0e0;
+  white-space: nowrap;
+}
+
+.template-table td {
+  padding: 15px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  white-space: nowrap;
+}
+
+.template-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+.template-name-cell {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.desc-cell {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--gray-color);
+}
+
+/* 操作列样式 */
+.table-actions {
   display: flex;
-  align-items: center;
   gap: 8px;
-  margin-bottom: 5px;
+  justify-content: center;
+  align-items: center;
 }
 
-.template-manufacturer {
-  color: var(--gray-color);
+.action-link {
+  color: #3498db;
+  text-decoration: none;
+  cursor: pointer;
   font-size: 14px;
-  margin-bottom: 10px;
-  margin-top: 5px;
+  white-space: nowrap;
+  transition: all 0.2s;
+  padding: 4px 4px;
+  border-radius: 4px;
 }
 
-.protocol-badge {
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: bold;
-  color: white;
-  background-color: var(--secondary-color);
+.action-link:hover {
+  text-decoration: underline;
+  background-color: rgba(52, 152, 219, 0.1);
 }
 
-.template-desc {
-  color: var(--gray-color);
-  font-size: 14px;
-  line-height: 1.5;
-  margin-bottom: 15px;
-  min-height: 40px;
+.action-link.delete {
+  color: #e74c3c;
 }
 
-.create-time {
-  font-size: 12px;
-  color: var(--gray-color);
+.action-link.delete:hover {
+  background-color: rgba(231, 76, 60, 0.1);
 }
 
-.action-btn.btn-sm {
-  padding: 6px 12px;
-  font-size: 12px;
-  min-height: 32px;
-}
-
-.action-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.fixed-column-action {
+  position: sticky;
+  right: 0;
+  background-color: #f8f9fa;
+  z-index: 10;
+  border-left: 2px solid #e0e0e0;
+  width: 180px;
+  min-width: 180px;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .cards-grid {
-    grid-template-columns: 1fr;
-  }
-
   .search-bar {
     flex-direction: column;
   }

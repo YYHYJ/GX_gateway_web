@@ -114,6 +114,16 @@ export const deviceService = {
     }
   },
 
+  // 获取设备实时状态
+  async getDeviceStatus() {
+    try {
+      const response = await apiClient.get('/device/status')
+      return response.data
+    } catch (error) {
+      throw this.handleApiError(error)
+    }
+  },
+
   // 获取模板列表
   async getDeviceTemplates() {
     try {

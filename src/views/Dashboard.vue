@@ -125,60 +125,7 @@
         </div>
       </div>
 
-      <!-- 网络状态监控卡片 -->
-      <div class="card">
-        <div class="card-header">
-          <h2 class="card-title"><i class="fas fa-network-wired"></i> 网络状态监控</h2>
-          <span class="status-badge status-normal">网络正常</span>
-        </div>
 
-        <div class="network-grid">
-          <div class="network-interface">
-            <div class="info-label">LAN接口 (eth0)</div>
-            <div class="info-value">192.168.1.1/24</div>
-            <div class="info-label">
-              状态: <span style="color: var(--success-color)">已连接</span>
-            </div>
-            <div class="bandwidth-meter">
-              <div class="bandwidth-label">
-                <span>上行: 12.5 Mbps</span>
-                <span>下行: 45.2 Mbps</span>
-              </div>
-              <div class="progress-bar">
-                <div
-                  class="progress-fill"
-                  style="width: 35%; background-color: var(--secondary-color)"
-                ></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="network-interface">
-            <div class="info-label">WAN接口 (eth1)</div>
-            <div class="info-value">10.10.15.23/16</div>
-            <div class="info-label">
-              状态: <span style="color: var(--success-color)">已连接</span>
-            </div>
-            <div class="bandwidth-meter">
-              <div class="bandwidth-label">
-                <span>上行: 8.2 Mbps</span>
-                <span>下行: 32.7 Mbps</span>
-              </div>
-              <div class="progress-bar">
-                <div
-                  class="progress-fill"
-                  style="width: 25%; background-color: var(--success-color)"
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="info-item" style="margin-top: 15px">
-          <div class="info-label">网络连接质量</div>
-          <div class="info-value">延迟: 28ms, 丢包率: 0.2%</div>
-        </div>
-      </div>
     </div>
   </MainLayout>
 </template>
@@ -736,39 +683,12 @@ export default {
   fill: none;
 }
 
-.network-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-}
 
-.network-interface {
-  padding: 15px;
-  border-radius: 6px;
-  background-color: #f8f9fa;
-  border-left: 4px solid var(--success-color);
-}
-
-.bandwidth-meter {
-  margin-top: 10px;
-}
-
-.bandwidth-label {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: var(--gray-color);
-  margin-bottom: 5px;
-}
 
 /* 响应式设计 */
 @media (max-width: 1024px) {
   .info-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .network-grid {
-    grid-template-columns: 1fr;
   }
 
   .card-footer {
