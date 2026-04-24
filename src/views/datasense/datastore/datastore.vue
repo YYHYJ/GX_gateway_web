@@ -128,12 +128,12 @@
           <div class="tiered-storage-container">
             <!-- 分层配置卡片 -->
             <div class="tier-config-cards">
-              <!-- Tier 1: 1-3天 (原始数据) -->
-              <div class="tier-card tier-active">
+              <!-- Tier 1: 原始数据 -->
+              <div class="tier-card">
                 <div class="tier-header">
                   <div class="tier-badge tier-1">
                     <i class="fas fa-fire"></i>
-                    1-3天
+                    {{ strategyConfig.tier1.retention_days }}天
                   </div>
                   <div class="tier-title">
                     <h4>{{ strategyConfig.tier1.name || '原始数据' }}</h4>
@@ -141,28 +141,38 @@
                 </div>
 
                 <div class="tier-body">
-                  <div class="tier-time-range">
-                    <span class="time-label">时间范围</span>
-                    <span class="time-value">{{
-                      strategyConfig.tier1.time_range || '第1天 - 第3天'
-                    }}</span>
+                  <div class="tier-info-row">
+                    <div class="tier-info-item">
+                      <span class="info-label">采集间隔</span>
+                      <input
+                        class="interval-input"
+                        :class="{ 'input-error': !isValidInterval(strategyConfig.tier1.interval) }"
+                        v-model="strategyConfig.tier1.interval"
+                        placeholder="如 1s, 5s, 30s"
+                      />
+                      <span v-if="!isValidInterval(strategyConfig.tier1.interval)" class="input-error-msg">格式：整数+单位(s/m/h)</span>
+                    </div>
+                    <div class="tier-info-item">
+                      <span class="info-label">保留天数</span>
+                      <span class="info-value">{{ strategyConfig.tier1.retention_days }}天</span>
+                    </div>
                   </div>
 
                   <div class="tier-form-group">
                     <label>
                       <i class="fas fa-wave-square"></i>
-                      存储策略
+                      取值方式
                     </label>
-                    <div class="sampling-options">
+                    <div class="function-options">
                       <div
-                        v-for="option in storageOptions.tier1"
-                        :key="option.value"
-                        class="sampling-option"
-                        :class="{ active: strategyConfig.tier1.strategy === option.value }"
-                        @click="strategyConfig.tier1.strategy = option.value"
+                        v-for="fn in availableFunctions"
+                        :key="fn.value"
+                        class="function-option"
+                        :class="{ active: strategyConfig.tier1.function === fn.value }"
+                        @click="strategyConfig.tier1.function = fn.value"
                       >
-                        <span class="option-value">{{ option.label }}</span>
-                        <span class="option-desc">{{ option.desc }}</span>
+                        <span class="fn-value">{{ fn.value }}</span>
+                        <span class="fn-label">{{ fn.label }}</span>
                       </div>
                     </div>
                   </div>
@@ -185,12 +195,12 @@
                 </div>
               </div>
 
-              <!-- Tier 2: 1-7天 (降采样数据) -->
+              <!-- Tier 2: 降采样数据 -->
               <div class="tier-card">
                 <div class="tier-header">
                   <div class="tier-badge tier-2">
                     <i class="fas fa-temperature-high"></i>
-                    1-7天
+                    {{ strategyConfig.tier2.retention_days }}天
                   </div>
                   <div class="tier-title">
                     <h4>{{ strategyConfig.tier2.name || '降采样数据' }}</h4>
@@ -198,28 +208,38 @@
                 </div>
 
                 <div class="tier-body">
-                  <div class="tier-time-range">
-                    <span class="time-label">时间范围</span>
-                    <span class="time-value">{{
-                      strategyConfig.tier2.time_range || '第1天 - 第7天'
-                    }}</span>
+                  <div class="tier-info-row">
+                    <div class="tier-info-item">
+                      <span class="info-label">采集间隔</span>
+                      <input
+                        class="interval-input"
+                        :class="{ 'input-error': !isValidInterval(strategyConfig.tier2.interval) }"
+                        v-model="strategyConfig.tier2.interval"
+                        placeholder="如 10s, 30s, 1m"
+                      />
+                      <span v-if="!isValidInterval(strategyConfig.tier2.interval)" class="input-error-msg">格式：整数+单位(s/m/h)</span>
+                    </div>
+                    <div class="tier-info-item">
+                      <span class="info-label">保留天数</span>
+                      <span class="info-value">{{ strategyConfig.tier2.retention_days }}天</span>
+                    </div>
                   </div>
 
                   <div class="tier-form-group">
                     <label>
                       <i class="fas fa-filter"></i>
-                      降采样策略
+                      取值方式
                     </label>
-                    <div class="sampling-options">
+                    <div class="function-options">
                       <div
-                        v-for="option in storageOptions.tier2"
-                        :key="option.value"
-                        class="sampling-option"
-                        :class="{ active: strategyConfig.tier2.strategy === option.value }"
-                        @click="strategyConfig.tier2.strategy = option.value"
+                        v-for="fn in availableFunctions"
+                        :key="fn.value"
+                        class="function-option"
+                        :class="{ active: strategyConfig.tier2.function === fn.value }"
+                        @click="strategyConfig.tier2.function = fn.value"
                       >
-                        <span class="option-value">{{ option.label }}</span>
-                        <span class="option-desc">{{ option.desc }}</span>
+                        <span class="fn-value">{{ fn.value }}</span>
+                        <span class="fn-label">{{ fn.label }}</span>
                       </div>
                     </div>
                   </div>
@@ -242,12 +262,12 @@
                 </div>
               </div>
 
-              <!-- Tier 3: 1-30天 (聚合数据) -->
+              <!-- Tier 3: 聚合数据 -->
               <div class="tier-card">
                 <div class="tier-header">
                   <div class="tier-badge tier-3">
                     <i class="fas fa-temperature-low"></i>
-                    1-30天
+                    {{ strategyConfig.tier3.retention_days }}天
                   </div>
                   <div class="tier-title">
                     <h4>{{ strategyConfig.tier3.name || '聚合数据' }}</h4>
@@ -255,28 +275,38 @@
                 </div>
 
                 <div class="tier-body">
-                  <div class="tier-time-range">
-                    <span class="time-label">时间范围</span>
-                    <span class="time-value">{{
-                      strategyConfig.tier3.time_range || '第1天 - 第30天'
-                    }}</span>
+                  <div class="tier-info-row">
+                    <div class="tier-info-item">
+                      <span class="info-label">采集间隔</span>
+                      <input
+                        class="interval-input"
+                        :class="{ 'input-error': !isValidInterval(strategyConfig.tier3.interval) }"
+                        v-model="strategyConfig.tier3.interval"
+                        placeholder="如 1m, 5m, 15m"
+                      />
+                      <span v-if="!isValidInterval(strategyConfig.tier3.interval)" class="input-error-msg">格式：整数+单位(s/m/h)</span>
+                    </div>
+                    <div class="tier-info-item">
+                      <span class="info-label">保留天数</span>
+                      <span class="info-value">{{ strategyConfig.tier3.retention_days }}天</span>
+                    </div>
                   </div>
 
                   <div class="tier-form-group">
                     <label>
                       <i class="fas fa-chart-bar"></i>
-                      聚合策略
+                      取值方式
                     </label>
-                    <div class="sampling-options">
+                    <div class="function-options">
                       <div
-                        v-for="option in storageOptions.tier3"
-                        :key="option.value"
-                        class="sampling-option"
-                        :class="{ active: strategyConfig.tier3.strategy === option.value }"
-                        @click="strategyConfig.tier3.strategy = option.value"
+                        v-for="fn in availableFunctions"
+                        :key="fn.value"
+                        class="function-option"
+                        :class="{ active: strategyConfig.tier3.function === fn.value }"
+                        @click="strategyConfig.tier3.function = fn.value"
                       >
-                        <span class="option-value">{{ option.label }}</span>
-                        <span class="option-desc">{{ option.desc }}</span>
+                        <span class="fn-value">{{ fn.value }}</span>
+                        <span class="fn-label">{{ fn.label }}</span>
                       </div>
                     </div>
                   </div>
@@ -306,7 +336,7 @@
                 <i class="fas fa-undo"></i>
                 恢复默认
               </button>
-              <button class="btn btn-primary" @click="saveConfig" :disabled="isSaving || isLoading">
+              <button class="btn btn-primary" @click="saveConfig" :disabled="isSaving || isLoading || !allIntervalsValid">
                 <i class="fas" :class="isSaving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
                 {{ isSaving ? '保存中...' : '保存配置' }}
               </button>
@@ -354,22 +384,28 @@ const strategyConfig = reactive({
   tier1: {
     enabled: false,
     strategy: '1s_raw',
+    interval: '1s',
+    function: 'last',
     name: '原始数据',
-    time_range: '第1天 - 第3天',
+    retention_days: 3,
   },
   tier2: {
     enabled: false,
-    strategy: '5s_avg',
+    strategy: '30s_last',
+    interval: '30s',
+    function: 'last',
     name: '降采样数据',
-    time_range: '第1天 - 第7天',
+    retention_days: 7,
   },
   tier3: {
     enabled: false,
-    strategy: '1m_avg',
+    strategy: '1m_last',
+    interval: '1m',
+    function: 'last',
     name: '聚合数据',
-    time_range: '第1天 - 第30天',
+    retention_days: 30,
   },
-  note: '超过30天的数据自动删除',
+  note: '超过保留天数的数据自动删除',
 })
 
 // 状态数据
@@ -377,55 +413,17 @@ const isLoading = ref(true)
 const loadError = ref(null)
 const isSaving = ref(false)
 
-// 存储策略选项（前端固定）
-const storageOptions = {
-  tier1: [
-    {
-      value: '1s_raw',
-      label: '1秒原始数据',
-      desc: '存储所有原始数据点',
-    },
-    {
-      value: '2s_raw',
-      label: '2秒原始数据',
-      desc: '原始数据，降低采样频率',
-    },
-  ],
-  tier2: [
-    {
-      value: '5s_avg',
-      label: '5秒平均值',
-      desc: '5秒间隔自动计算平均值',
-    },
-    {
-      value: '10s_avg',
-      label: '10秒平均值',
-      desc: '10秒间隔自动计算平均值',
-    },
-    {
-      value: '30s_avg',
-      label: '30秒平均值',
-      desc: '30秒间隔自动计算平均值',
-    },
-  ],
-  tier3: [
-    {
-      value: '1m_avg',
-      label: '1分钟平均值',
-      desc: '1分钟间隔自动计算平均值',
-    },
-    {
-      value: '5m_avg',
-      label: '5分钟平均值',
-      desc: '5分钟间隔自动计算平均值',
-    },
-    {
-      value: '15m_avg',
-      label: '15分钟平均值',
-      desc: '15分钟间隔自动计算平均值',
-    },
-  ],
-}
+// 可选取值方式（从后端加载）
+const availableFunctions = ref([
+  { value: 'last', label: '最新值(取窗口内最后一个真实值)' },
+])
+
+// 校验间隔格式：正整数 + s/m/h
+const isValidInterval = (val) => /^[1-9]\d*[smh]$/.test(val)
+
+const allIntervalsValid = computed(() =>
+  ['tier1', 'tier2', 'tier3'].every((t) => isValidInterval(strategyConfig[t].interval)),
+)
 
 // 计算属性
 const influxDBUIUrl = computed(() => {
@@ -478,31 +476,21 @@ const loadConfigFromBackend = async () => {
     }
 
     if (result.strategy) {
-      if (result.strategy.tier1) {
-        Object.assign(strategyConfig.tier1, {
-          enabled: Boolean(result.strategy.tier1.enabled),
-          strategy: result.strategy.tier1.strategy || '',
-          name: result.strategy.tier1.name || '原始数据',
-          time_range: result.strategy.tier1.time_range || '第1天 - 第3天',
-        })
+      for (const tier of ['tier1', 'tier2', 'tier3']) {
+        if (result.strategy[tier]) {
+          Object.assign(strategyConfig[tier], {
+            enabled: Boolean(result.strategy[tier].enabled),
+            strategy: result.strategy[tier].strategy || '',
+            interval: result.strategy[tier].interval || '',
+            function: result.strategy[tier].function || 'last',
+            name: result.strategy[tier].name || '',
+            retention_days: result.strategy[tier].retention_days || 0,
+          })
+        }
       }
 
-      if (result.strategy.tier2) {
-        Object.assign(strategyConfig.tier2, {
-          enabled: Boolean(result.strategy.tier2.enabled),
-          strategy: result.strategy.tier2.strategy || '',
-          name: result.strategy.tier2.name || '降采样数据',
-          time_range: result.strategy.tier2.time_range || '第1天 - 第7天',
-        })
-      }
-
-      if (result.strategy.tier3) {
-        Object.assign(strategyConfig.tier3, {
-          enabled: Boolean(result.strategy.tier3.enabled),
-          strategy: result.strategy.tier3.strategy || '',
-          name: result.strategy.tier3.name || '聚合数据',
-          time_range: result.strategy.tier3.time_range || '第1天 - 第30天',
-        })
+      if (result.strategy.available_functions) {
+        availableFunctions.value = result.strategy.available_functions
       }
 
       if (result.strategy.note) {
@@ -534,20 +522,16 @@ const openInfluxDBUI = () => {
 const saveConfig = async () => {
   isSaving.value = true
   try {
+    const buildTier = (tier) => ({
+      enabled: tier.enabled,
+      interval: tier.interval,
+      function: tier.function,
+    })
     const requestData = {
       strategy: {
-        tier1: {
-          enabled: strategyConfig.tier1.enabled,
-          strategy: strategyConfig.tier1.strategy,
-        },
-        tier2: {
-          enabled: strategyConfig.tier2.enabled,
-          strategy: strategyConfig.tier2.strategy,
-        },
-        tier3: {
-          enabled: strategyConfig.tier3.enabled,
-          strategy: strategyConfig.tier3.strategy,
-        },
+        tier1: buildTier(strategyConfig.tier1),
+        tier2: buildTier(strategyConfig.tier2),
+        tier3: buildTier(strategyConfig.tier3),
       },
     }
 
@@ -921,27 +905,7 @@ onMounted(() => {
   flex: 1;
 }
 
-.tier-time-range {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 12px;
-  background: #edf2f7;
-  border-radius: 6px;
-  margin-bottom: 16px;
-  border: 1px solid #e1e5e9;
-}
 
-.time-label {
-  font-size: 13px;
-  color: #7f8c8d;
-}
-
-.time-value {
-  font-size: 13px;
-  font-weight: 600;
-  color: #2c3e50;
-}
 
 .tier-form-group {
   margin-bottom: 16px;
@@ -961,49 +925,109 @@ onMounted(() => {
   margin-bottom: 8px;
 }
 
-.sampling-options {
+.tier-info-row {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.sampling-option {
-  padding: 12px;
-  border: 1px solid #e1e5e9;
+.tier-info-item {
+  flex: 1;
+  padding: 10px 12px;
+  background: #edf2f7;
   border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
+  border: 1px solid #e1e5e9;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.sampling-option:hover {
-  border-color: #3498db;
-  background: #f8fafc;
-}
-
-.sampling-option.active {
-  border-color: #3498db;
-  background: #e3f2fd;
-}
-
-.option-value {
-  font-weight: 600;
-  font-size: 14px;
-  color: #2c3e50;
-}
-
-.sampling-option.active .option-value {
-  color: #3498db;
-}
-
-.option-desc {
+.info-label {
   font-size: 12px;
   color: #7f8c8d;
 }
 
-.sampling-option.active .option-desc {
+.info-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.interval-input {
+  width: 100%;
+  padding: 4px 0;
+  border: none;
+  border-bottom: 1.5px solid #3498db;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.interval-input:focus {
+  border-bottom-color: #2980b9;
+}
+
+.interval-input.input-error {
+  border-bottom-color: #e74c3c;
+}
+
+.input-error-msg {
+  font-size: 11px;
+  color: #e74c3c;
+}
+
+.interval-input::placeholder {
+  color: #bdc3c7;
+  font-weight: 400;
+}
+
+.function-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.function-option {
+  padding: 8px 14px;
+  border: 1px solid #e1e5e9;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.function-option:hover {
+  border-color: #3498db;
+  background: #f8fafc;
+}
+
+.function-option.active {
+  border-color: #3498db;
+  background: #e3f2fd;
+  color: #3498db;
+}
+
+.fn-value {
+  font-weight: 600;
+  font-size: 13px;
+  color: #2c3e50;
+}
+
+.function-option.active .fn-value {
+  color: #3498db;
+}
+
+.fn-label {
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
+.function-option.active .fn-label {
   color: #3498db;
 }
 
