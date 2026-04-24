@@ -70,6 +70,10 @@
           </button>
         </div>
         <div class="action-right">
+          <button class="btn btn-outline" @click="toggleGrouping">
+            <i :class="showGrouping ? 'fas fa-compress-alt' : 'fas fa-expand-alt'"></i>
+            {{ showGrouping ? '取消分组' : '分组展示' }}
+          </button>
           <button class="btn btn-primary" @click="showAddPointDialog">
             <i class="fas fa-plus"></i> 新增点位
           </button>
@@ -148,7 +152,41 @@
                   <button class="btn btn-outline" @click="resetSearch">重置搜索条件</button>
                 </td>
               </tr>
-              <tr v-for="point in points" :key="point.id">
+              <template v-for="point in groupedPoints">
+                <!-- 分组折叠行 -->
+                <tr
+                  v-if="point._isGroupHeader"
+                  :key="'group-' + point._groupId"
+                  class="group-header-row"
+                  @click="toggleGroup(point._groupId)"
+                >
+                  <td>
+                    <i
+                      :class="isGroupExpanded(point._groupId) ? 'fas fa-chevron-down' : 'fas fa-chevron-right'"
+                      class="group-toggle-icon"
+                    ></i>
+                  </td>
+                  <td colspan="3">
+                    <span class="group-badge">
+                      <i class="fas fa-layer-group"></i>
+                      组 {{ point._groupId.replace('group-', '') }}
+                    </span>
+                    <span class="group-info">
+                      功能码 {{ point._groupInfo.functionCode }} |
+                      {{ point._groupInfo.count }}个点位 |
+                      地址 {{ point._groupInfo.startAddress }} ~ {{ point._groupInfo.endAddress }} |
+                      寄存器数量={{ point._groupInfo.quantity }}
+                    </span>
+                  </td>
+                  <td>{{ point.address }}</td>
+                  <td colspan="19">
+                    <span v-if="!isGroupExpanded(point._groupId)" class="collapsed-hint">
+                      <i class="fas fa-plus"></i> 展开 {{ point._groupInfo.count }} 个点位
+                    </span>
+                  </td>
+                </tr>
+                <!-- 普通点位行 -->
+                <tr v-else :key="point.id" :class="{ 'group-child-row': point._groupId && !point._isGroupHeader }">
                 <td>
                   <input type="checkbox" v-model="selectedPoints" :value="point.id" />
                 </td>
@@ -309,6 +347,7 @@
                   </div>
                 </td>
               </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -929,11 +968,226 @@ export default {
         warningLow: null,
         warningHigh: null,
       },
+
+      // 分组折叠状态（默认全部折叠）
+      collapsedGroups: {},
+      showGrouping: true,
     }
   },
   computed: {
     dataTypeOptions() {
       return dataTypeOptions
+    },
+
+    // 获取数据类型族（用于分组判断）
+    getDataTypeFamily() {
+      return (dataType, functionCode) => {
+        // boolean 类型（功能码 01/02）
+        if (functionCode === 1 || functionCode === 2) {
+          if (dataType === 'boolean') return 'boolean'
+        }
+        // bit 类型（功能码 03/04）
+        if (functionCode === 3 || functionCode === 4) {
+          if (dataType === 'bit' || dataType.startsWith('bit')) return 'bit'
+        }
+        // 普通类型
+        return 'normal'
+      }
+    },
+
+    // 获取点位长度（与后端 get_data_type_length 一致）
+    getPointLength() {
+      return (dataType, functionCode) => {
+        // boolean 类型（功能码 01/02）：长度始终为 1
+        if ((functionCode === 1 || functionCode === 2) && dataType === 'boolean') {
+          return 1
+        }
+        // bit 类型（功能码 03/04）：长度视为 0（共享寄存器）
+        if ((functionCode === 3 || functionCode === 4) && (dataType === 'bit' || dataType.startsWith('bit'))) {
+          return 0
+        }
+        // 普通寄存器类型
+        const intervalMap = {
+          int16: 1, uint16: 1,
+          int32: 2, uint32: 2,
+          float: 2,
+          double: 4,
+        }
+        return intervalMap[dataType] || 1
+      }
+    },
+
+    // 判断是否可以为 boolean 类型（功能码 01/02）
+    isBoolean01_02() {
+      return (functionCode, dataType) => {
+        return (functionCode === 1 || functionCode === 2) && dataType === 'boolean'
+      }
+    },
+
+    // 判断是否为 bit 类型（功能码 03/04）
+    isBitDataType() {
+      return (functionCode, dataType) => {
+        return (functionCode === 3 || functionCode === 4) && 
+               (dataType === 'bit' || dataType.startsWith('bit'))
+      }
+    },
+
+    // 分组后的点位列表（与后端 create_register_groups 逻辑一致）
+    groupedPoints() {
+      if (!this.showGrouping || !this.allPoints || this.allPoints.length === 0) {
+        return this.allPoints.map((point, index) => ({
+          ...point,
+          _groupId: `single-${index}`,
+          _isGroupHeader: false,
+          _groupPoints: [point],
+        }))
+      }
+
+      // 按地址升序排列
+      const sortedPoints = [...this.allPoints].sort((a, b) => a.address - b.address)
+
+      const groups = []
+      let currentGroup = null
+
+      // 批量上限（与后端一致）
+      const limits = {
+        boolean: 100, // 线圈最多 100 个
+        bit: 100,     // bit 类型最多 100 个
+        normal: 60,   // 普通寄存器最多 60 个
+      }
+
+      sortedPoints.forEach((point) => {
+        const fc = point.functionCode
+        const dt = point.dataType
+        const isBoolean = this.isBoolean01_02(fc, dt)
+        const isBit = this.isBitDataType(fc, dt)
+        const dtFamily = isBoolean ? 'boolean' : (isBit ? 'bit' : 'normal')
+        const pointLength = this.getPointLength(dt, fc)
+
+        // 检查是否可以加入现有组
+        let canJoin = false
+        if (currentGroup) {
+          // 功能码相同
+          const sameFunctionCode = currentGroup.functionCode === fc
+          // 数据类型族相同
+          const sameDataTypeFamily = currentGroup.dataTypeFamily === dtFamily
+          
+          let isContinuous = false
+          let withinLimit = false
+
+          if (isBoolean) {
+            // boolean 类型：地址连续即可
+            isContinuous = point.address === currentGroup.startAddress + currentGroup.quantity
+            withinLimit = currentGroup.quantity < limits.boolean
+          } else if (isBit) {
+            // bit 类型：允许多个 bit 共享同一个寄存器
+            // 新 bit 地址 <= start + quantity（表示在当前寄存器范围内）
+            isContinuous = point.address <= currentGroup.startAddress + currentGroup.quantity
+            // bit 类型 quantity 表示占用的寄存器数量
+            withinLimit = currentGroup.quantity < limits.bit
+          } else {
+            // 普通寄存器类型：地址连续
+            isContinuous = point.address === currentGroup.startAddress + currentGroup.quantity
+            withinLimit = currentGroup.quantity < limits.normal
+          }
+
+          canJoin = sameFunctionCode && sameDataTypeFamily && isContinuous && withinLimit
+        }
+
+        if (!currentGroup || !canJoin) {
+          // 创建新组
+          if (currentGroup) {
+            groups.push(currentGroup)
+          }
+
+          let initialQuantity
+          if (isBoolean) {
+            // boolean 类型（功能码 01/02）：quantity 表示线圈数量
+            initialQuantity = pointLength // 通常是 1
+          } else if (isBit) {
+            // bit 类型（功能码 03/04）：即使只有一个 bit，也占用整个寄存器
+            initialQuantity = 1
+          } else {
+            // 其他类型：根据数据类型长度
+            initialQuantity = pointLength
+          }
+
+          currentGroup = {
+            groupId: `group-${groups.length}`,
+            functionCode: fc,
+            dataTypeFamily: dtFamily,
+            startAddress: point.address,
+            quantity: initialQuantity,
+            points: [point],
+          }
+        } else {
+          // 加入现有组
+          if (isBoolean) {
+            // boolean 类型：增加线圈数量
+            currentGroup.quantity += pointLength
+          } else if (isBit) {
+            // bit 类型：检查是否需要扩展 quantity
+            if (point.address >= currentGroup.startAddress + currentGroup.quantity) {
+              // 需要扩展到下一个寄存器
+              currentGroup.quantity = point.address - currentGroup.startAddress + 1
+            }
+          } else {
+            // 普通寄存器类型：增加寄存器数量
+            currentGroup.quantity += pointLength
+          }
+          currentGroup.points.push(point)
+        }
+      })
+
+      // 添加最后一组
+      if (currentGroup) {
+        groups.push(currentGroup)
+      }
+
+      // 转换为展示格式
+      const result = []
+      groups.forEach((group) => {
+        if (group.points.length === 1) {
+          // 单点位不需要折叠
+          result.push({
+            ...group.points[0],
+            _groupId: group.groupId,
+            _isGroupHeader: false,
+            _groupPoints: group.points,
+            _groupInfo: null,
+          })
+        } else {
+          // 多点位需要折叠
+          result.push({
+            ...group.points[0],
+            _groupId: group.groupId,
+            _isGroupHeader: true,
+            _groupPoints: group.points,
+            _groupInfo: {
+              functionCode: group.functionCode,
+              dataTypeFamily: group.dataTypeFamily,
+              startAddress: group.startAddress,
+              quantity: group.quantity,
+              endAddress: group.points[group.points.length - 1].address,
+              count: group.points.length,
+            },
+          })
+          // 添加折叠的行（仅在展开状态时显示）
+          if (this.isGroupExpanded(group.groupId)) {
+            group.points.slice(1).forEach((p) => {
+              result.push({
+                ...p,
+                _groupId: group.groupId,
+                _isGroupHeader: false,
+                _groupPoints: group.points,
+                _groupInfo: null,
+              })
+            })
+          }
+        }
+      })
+
+      return result
     },
 
     // 数据类型与地址间隔的映射关系
@@ -1084,12 +1338,32 @@ export default {
     window.addEventListener('resize', this.calcTableHeight)
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     window.removeEventListener('resize', this.calcTableHeight)
   },
 
   methods: {
     formatDataType,
+
+    // 切换分组展开/折叠状态
+    toggleGroup(groupId) {
+      this.collapsedGroups = {
+        ...this.collapsedGroups,
+        [groupId]: !this.collapsedGroups[groupId],
+      }
+    },
+
+    // 判断分组是否展开（默认折叠，未在 collapsedGroups 中或值为 false 表示折叠）
+    isGroupExpanded(groupId) {
+      return this.collapsedGroups[groupId] === true
+    },
+
+    // 切换分组展示功能
+    toggleGrouping() {
+      this.showGrouping = !this.showGrouping
+      // 重置折叠状态
+      this.collapsedGroups = {}
+    },
 
     calcTableHeight() {
       this.tableMaxHeight = Math.max(300, window.innerHeight - 380)
@@ -2157,7 +2431,7 @@ export default {
             fallbackReader.onload = (e) => {
               resolve(e.target.result)
             }
-            fallbackReader.onerror = (e) => {
+            fallbackReader.onerror = () => {
               reject(new Error('读取文件失败'))
             }
             fallbackReader.readAsText(file, 'GBK')
@@ -2225,6 +2499,57 @@ export default {
 
 <style scoped>
 @import './protocolCommon.css';
+
+/* 分组折叠样式 */
+.group-header-row {
+  background-color: #e8f4fc !important;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.group-header-row:hover {
+  background-color: #d4e9f7 !important;
+}
+
+.group-toggle-icon {
+  color: #1890ff;
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+
+.group-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #1890ff;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.group-info {
+  margin-left: 10px;
+  color: #666;
+  font-size: 12px;
+}
+
+.collapsed-hint {
+  color: #1890ff;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.group-child-row {
+  background-color: #fafafa;
+}
+
+.group-child-row:hover {
+  background-color: #f0f0f0;
+}
 
 /* Modbus 协议特有样式 */
 .modbus-protocol-config {

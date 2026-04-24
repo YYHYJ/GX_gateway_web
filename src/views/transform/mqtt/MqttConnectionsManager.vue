@@ -145,13 +145,10 @@
 
           <!-- 空状态 -->
           <tr v-if="!loading && !error && connections.length === 0">
-            <td colspan="5" class="empty-state">
-              <div class="empty-content">
+            <td colspan="5" class="table-empty-cell">
+              <div class="table-empty-inner">
                 <i class="fas fa-network-wired"></i>
-                <div class="empty-message">暂无MQTT连接配置</div>
-                <button class="btn btn-add-inline" @click="$emit('connection-add')">
-                  + 添加连接
-                </button>
+                <div class="table-empty-text">暂无MQTT连接配置，请点击右上角「添加连接」</div>
               </div>
             </td>
           </tr>
@@ -192,18 +189,48 @@ export default {
   ],
   data() {
     return {
-      // ❌ 删除这行：connections: [], // 不再需要，使用props.connections
       loading: false,
       error: null,
       mqttService: null,
       processingOperations: new Set(),
+      statusTimer: null,
     }
   },
   created() {
     this.initializeService()
     this.loadConnections()
+    this.startStatusPolling()
+  },
+  beforeDestroy() {
+    this.stopStatusPolling()
   },
   methods: {
+    // 定时轮询连接状态（10秒）
+    startStatusPolling() {
+      this.statusTimer = setInterval(() => {
+        if (!this.loading && this.processingOperations.size === 0) {
+          this.pollStatus()
+        }
+      }, 10000)
+    },
+
+    stopStatusPolling() {
+      if (this.statusTimer) {
+        clearInterval(this.statusTimer)
+        this.statusTimer = null
+      }
+    },
+
+    async pollStatus() {
+      try {
+        if (!this.mqttService) return
+        const loadedConnections = await this.mqttService.getAllConnections()
+        this.$emit('connections-loaded', loadedConnections)
+      } catch (e) {
+        // 静默失败，不影响界面
+      }
+    },
+
     // 初始化服务
     initializeService() {
       try {
@@ -961,47 +988,32 @@ export default {
   background-color: rgba(220, 53, 69, 0.05);
 }
 
-/* 空状态 */
-.empty-state {
-  padding: 80px 20px;
-  text-align: center;
-  background-color: #fafafa;
+/* 表格空状态 */
+.table-empty-cell {
+  padding: 60px 20px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  background-color: white;
 }
 
-.empty-content {
-  display: inline-flex;
+.table-empty-inner {
+  display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  justify-content: center;
+  gap: 16px;
 }
 
-.empty-content i {
-  font-size: 60px;
+.table-empty-inner i {
+  font-size: 48px;
   color: #dee2e6;
-  margin-bottom: 15px;
 }
 
-.empty-message {
+.table-empty-text {
   color: #6c757d;
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.btn-add-inline {
-  background-color: #3498db;
-  color: white;
-  border: none;
-  padding: 10px 24px;
-  border-radius: 4px;
-  cursor: pointer;
   font-size: 15px;
-  font-weight: 500;
-  transition: background-color 0.2s;
 }
 
-.btn-add-inline:hover {
-  background-color: #2980b9;
-}
 
 /* 滚动条样式 */
 .topics-list::-webkit-scrollbar {

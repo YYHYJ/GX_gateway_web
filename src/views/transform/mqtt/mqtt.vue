@@ -141,15 +141,12 @@
           </div>
         </div>
 
-        <!-- 3. 无连接选中时的提示 -->
+        <!-- 3. 无连接时的提示 -->
         <div v-else-if="mqttConnections.length === 0" class="no-connection-selected">
           <div class="empty-state">
             <i class="fas fa-plug"></i>
             <h4>暂无MQTT连接配置</h4>
-            <p>点击左上角的"添加连接"按钮创建新的MQTT客户端连接</p>
-            <button class="btn btn-primary" @click="startCreateConnection">
-              <i class="fas fa-plus"></i> 创建新连接
-            </button>
+            <p>点击上方连接管理的「添加连接」按钮创建新的MQTT客户端连接</p>
           </div>
         </div>
 
@@ -158,10 +155,7 @@
           <div class="empty-state">
             <i class="fas fa-plug"></i>
             <h4>请选择一个MQTT连接进行配置</h4>
-            <p>从左侧列表中选择一个连接进行编辑，或者创建新的连接</p>
-            <button class="btn btn-primary" @click="startCreateConnection">
-              <i class="fas fa-plus"></i> 创建新连接
-            </button>
+            <p>从上方列表中选择一个连接进行编辑，或者点击「添加连接」创建新的连接</p>
           </div>
         </div>
       </div>

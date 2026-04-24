@@ -106,7 +106,7 @@ export function formatDbToFrontend(brokersData = [], topicsData = []) {
       id: broker[DB_FIELDS.BROKERS.ID],
       brokerName: broker[DB_FIELDS.BROKERS.BROKER_NAME] || '',
       enabled: Boolean(broker[DB_FIELDS.BROKERS.ENABLED]),
-      status: broker.enabled ? '未连接' : '已禁用',
+      status: !broker.enabled ? '已禁用' : broker.connected ? '已连接' : '未连接',
       lastActivity: '',
 
       // 基础连接配置（前端格式）
