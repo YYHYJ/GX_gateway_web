@@ -66,16 +66,18 @@
               <option :value="true">保留</option>
             </select>
           </div>
+        </div>
 
-          <div class="config-item action-item">
-            <button
-              class="btn-add"
-              @click="addPublishTopic"
-              :disabled="!enabled || !newPublish.topic.trim()"
-            >
-              <i class="fas fa-plus"></i> 添加发布主题
-            </button>
-          </div>
+        <div class="section-actions">
+          <button
+            class="btn-add"
+            @click="addPublishTopic"
+            :disabled="!enabled || !newPublish.topic.trim()"
+          >
+            <i class="fas" :class="editingId ? 'fa-check' : 'fa-plus'"></i>
+            {{ editingId ? '保存修改' : '添加发布主题' }}
+          </button>
+          <button v-if="editingId" class="btn-cancel-edit" @click="cancelEdit">取消</button>
         </div>
       </div>
 
@@ -113,16 +115,18 @@
               <option value="2">QoS 2 - 恰好一次</option>
             </select>
           </div>
+        </div>
 
-          <div class="config-item action-item">
-            <button
-              class="btn-add"
-              @click="addSubscribeTopic"
-              :disabled="!enabled || !newSubscribe.topic.trim()"
-            >
-              <i class="fas fa-plus"></i> 添加订阅主题
-            </button>
-          </div>
+        <div class="section-actions">
+          <button
+            class="btn-add"
+            @click="addSubscribeTopic"
+            :disabled="!enabled || !newSubscribe.topic.trim()"
+          >
+            <i class="fas" :class="editingId ? 'fa-check' : 'fa-plus'"></i>
+            {{ editingId ? '保存修改' : '添加订阅主题' }}
+          </button>
+          <button v-if="editingId" class="btn-cancel-edit" @click="cancelEdit">取消</button>
         </div>
       </div>
 
@@ -364,25 +368,38 @@ export default {
       }
     },
 
+    // 取消编辑
+    cancelEdit() {
+      this.editingId = null
+      this.newPublish = { topic: '', qos: '1', retain: false }
+      this.newSubscribe = { topic: '', qos: '1' }
+    },
+
     // 编辑主题
     editTopic(topic) {
       this.editingId = topic.id
 
       if (topic.type === 'publish') {
+        this.config.enablePublish = true
         this.newPublish = {
           topic: topic.topic,
-          qos: topic.qos,
+          qos: String(topic.qos),
           retain: topic.retain || false,
         }
       } else {
+        this.config.enableSubscribe = true
         this.newSubscribe = {
           topic: topic.topic,
-          qos: topic.qos,
+          qos: String(topic.qos),
         }
       }
 
-      // 滚动到顶部
-      this.$el.querySelector('.topic-section')?.scrollIntoView({ behavior: 'smooth' })
+      this.$nextTick(() => {
+        const section = this.$el.querySelector(
+          topic.type === 'publish' ? '.publish-section' : '.subscribe-section',
+        )
+        if (section) section.scrollIntoView({ behavior: 'smooth' })
+      })
     },
 
     // 删除主题
@@ -516,7 +533,18 @@ export default {
 
 .config-item.action-item {
   display: flex;
+  flex-direction: row;
   align-items: flex-end;
+  gap: 8px;
+}
+
+.section-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed #e1e5e9;
 }
 
 /* 功能开关 */
@@ -675,6 +703,24 @@ select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   background: #95a5a6;
+}
+
+.btn-cancel-edit {
+  background: none;
+  border: 1px solid #95a5a6;
+  color: #7f8c8d;
+  border-radius: 6px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  height: 40px;
+  transition: all 0.2s;
+}
+
+.btn-cancel-edit:hover {
+  background: #f8f9fa;
+  color: #2c3e50;
+  border-color: #7f8c8d;
 }
 
 /* 下拉选择框 */

@@ -628,22 +628,55 @@ export default {
       }
     },
 
-    // 更新broker的topics
+    // 更新broker的topics（增量操作，保留未变化的topic ID）
     async updateTopicsForBroker(brokerId, newTopics) {
       try {
         const mqttService = createMqttService(this.$axios)
-
-        // 1. 获取该broker现有的topics
         const existingTopics = await mqttService.getTopicsByBrokerId(brokerId)
 
-        // 2. 删除旧的topics
-        const deletePromises = existingTopics.map((topic) => mqttService.deleteTopic(topic.id))
-        await Promise.all(deletePromises)
-        console.log(`删除 ${existingTopics.length} 个旧topic`)
+        const newList = newTopics || []
 
-        // 3. 创建新的topics
-        if (newTopics && newTopics.length > 0) {
-          await this.saveTopicsToBackend(brokerId, newTopics)
+        // 分类：有id的是已存在的，无id的是新增的
+        const toUpdate = []
+        const toCreate = []
+        const keptIds = new Set()
+
+        for (const t of newList) {
+          if (t.id && existingTopics.some((e) => e.id === t.id)) {
+            toUpdate.push(t)
+            keptIds.add(t.id)
+          } else {
+            toCreate.push(t)
+          }
+        }
+
+        // 删除：旧列表中不在新列表里的
+        const toDelete = existingTopics.filter((e) => !keptIds.has(e.id))
+
+        // 执行删除
+        if (toDelete.length > 0) {
+          await Promise.all(toDelete.map((t) => mqttService.deleteTopic(t.id)))
+          console.log(`删除 ${toDelete.length} 个topic`)
+        }
+
+        // 执行更新
+        for (const t of toUpdate) {
+          await mqttService.updateTopic({
+            id: t.id,
+            broker_id: brokerId,
+            topic_name: t.topic,
+            direction: t.type === 'publish' ? 0 : 1,
+            qos: t.qos || 1,
+            enabled: t.enabled ? 1 : 0,
+            description: t.description || '',
+          })
+        }
+        if (toUpdate.length > 0) console.log(`更新 ${toUpdate.length} 个topic`)
+
+        // 执行新增
+        if (toCreate.length > 0) {
+          await this.saveTopicsToBackend(brokerId, toCreate)
+          console.log(`新增 ${toCreate.length} 个topic`)
         }
       } catch (error) {
         console.error('更新topics失败:', error)

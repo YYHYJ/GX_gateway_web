@@ -162,7 +162,11 @@
                 >
                   <td>
                     <i
-                      :class="isGroupExpanded(point._groupId) ? 'fas fa-chevron-down' : 'fas fa-chevron-right'"
+                      :class="
+                        isGroupExpanded(point._groupId)
+                          ? 'fas fa-chevron-down'
+                          : 'fas fa-chevron-right'
+                      "
                       class="group-toggle-icon"
                     ></i>
                   </td>
@@ -173,8 +177,8 @@
                     </span>
                     <span class="group-info">
                       功能码 {{ point._groupInfo.functionCode }} |
-                      {{ point._groupInfo.count }}个点位 |
-                      地址 {{ point._groupInfo.startAddress }} ~ {{ point._groupInfo.endAddress }} |
+                      {{ point._groupInfo.count }}个点位 | 地址
+                      {{ point._groupInfo.startAddress }} ~ {{ point._groupInfo.endAddress }} |
                       寄存器数量={{ point._groupInfo.quantity }}
                     </span>
                   </td>
@@ -186,167 +190,332 @@
                   </td>
                 </tr>
                 <!-- 普通点位行 -->
-                <tr v-else :key="point.id" :class="{ 'group-child-row': point._groupId && !point._isGroupHeader }">
-                <td>
-                  <input type="checkbox" v-model="selectedPoints" :value="point.id" />
-                </td>
+                <tr
+                  v-else
+                  :key="point.id"
+                  :class="{ 'group-child-row': point._groupId && !point._isGroupHeader }"
+                >
+                  <td>
+                    <input type="checkbox" v-model="selectedPoints" :value="point.id" />
+                  </td>
 
-                <!-- 点位代码：文本输入 -->
-                <td @click="startInlineEdit(point, 'pointCode')">
-                  <input v-if="isEditing(point, 'pointCode')" v-model="inlineEditValue" class="inline-edit-input" @blur="saveInlineEdit(point, 'pointCode')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
-                  <div v-else class="cell-editable">{{ point.pointCode }}</div>
-                </td>
+                  <!-- 点位代码：文本输入 -->
+                  <td @click="startInlineEdit(point, 'pointCode')">
+                    <input
+                      v-if="isEditing(point, 'pointCode')"
+                      v-model="inlineEditValue"
+                      class="inline-edit-input"
+                      @blur="saveInlineEdit(point, 'pointCode')"
+                      @keyup.enter="$event.target.blur()"
+                      @keyup.escape="cancelInlineEdit"
+                      ref="inlineInput"
+                    />
+                    <div v-else class="cell-editable">{{ point.pointCode }}</div>
+                  </td>
 
-                <!-- 点位名称：文本输入 -->
-                <td @click="startInlineEdit(point, 'pointName')">
-                  <input v-if="isEditing(point, 'pointName')" v-model="inlineEditValue" class="inline-edit-input" @blur="saveInlineEdit(point, 'pointName')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
-                  <div v-else class="point-name cell-editable">{{ point.pointName }}</div>
-                </td>
+                  <!-- 点位名称：文本输入 -->
+                  <td @click="startInlineEdit(point, 'pointName')">
+                    <input
+                      v-if="isEditing(point, 'pointName')"
+                      v-model="inlineEditValue"
+                      class="inline-edit-input"
+                      @blur="saveInlineEdit(point, 'pointName')"
+                      @keyup.enter="$event.target.blur()"
+                      @keyup.escape="cancelInlineEdit"
+                      ref="inlineInput"
+                    />
+                    <div v-else class="point-name cell-editable">{{ point.pointName }}</div>
+                  </td>
 
-                <!-- 状态：点击切换 -->
-                <td @click="toggleField(point, 'isActive')">
-                  <span class="status-badge toggle-badge" :class="point.isActive === 1 ? 'status-active' : 'status-inactive'">
-                    {{ point.isActive === 1 ? '启用' : '停用' }}
-                  </span>
-                </td>
+                  <!-- 状态：点击切换 -->
+                  <td @click="toggleField(point, 'isActive')">
+                    <span
+                      class="status-badge toggle-badge"
+                      :class="point.isActive === 1 ? 'status-active' : 'status-inactive'"
+                    >
+                      {{ point.isActive === 1 ? '启用' : '停用' }}
+                    </span>
+                  </td>
 
-                <!-- 地址：数字输入 -->
-                <td @click="startInlineEdit(point, 'address')">
-                  <input v-if="isEditing(point, 'address')" v-model.number="inlineEditValue" type="number" class="inline-edit-input" @blur="saveInlineEdit(point, 'address')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
-                  <div v-else class="cell-editable">{{ point.address }}</div>
-                </td>
+                  <!-- 地址：数字输入 -->
+                  <td @click="startInlineEdit(point, 'address')">
+                    <input
+                      v-if="isEditing(point, 'address')"
+                      v-model.number="inlineEditValue"
+                      type="number"
+                      class="inline-edit-input"
+                      @blur="saveInlineEdit(point, 'address')"
+                      @keyup.enter="$event.target.blur()"
+                      @keyup.escape="cancelInlineEdit"
+                      ref="inlineInput"
+                    />
+                    <div v-else class="cell-editable">{{ point.address }}</div>
+                  </td>
 
-                <!-- 可控：点击切换 -->
-                <td @click="toggleField(point, 'isControl')">
-                  <span class="control-badge toggle-badge" :class="point.isControl === 1 ? 'control-enabled' : 'control-disabled'">
-                    {{ point.isControl === 1 ? '可控' : '不可控' }}
-                  </span>
-                </td>
+                  <!-- 可控：点击切换 -->
+                  <td @click="toggleField(point, 'isControl')">
+                    <span
+                      class="control-badge toggle-badge"
+                      :class="point.isControl === 1 ? 'control-enabled' : 'control-disabled'"
+                    >
+                      {{ point.isControl === 1 ? '可控' : '不可控' }}
+                    </span>
+                  </td>
 
-                <!-- 功能码：下拉选择 -->
-                <td @click="startInlineEdit(point, 'functionCode')">
-                  <select v-if="isEditing(point, 'functionCode')" v-model.number="inlineEditValue" class="inline-edit-select" @change="saveInlineEdit(point, 'functionCode')" @blur="cancelInlineEdit" ref="inlineInput">
-                    <option :value="1">01 - 遥信</option>
-                    <option :value="2">02 - 遥信</option>
-                    <option :value="3">03 - 遥测</option>
-                    <option :value="4">04 - 遥测</option>
-                    <option :value="5">05 - 遥控</option>
-                    <option :value="6">06 - 遥调</option>
-                    <option :value="15">15 - 遥控</option>
-                    <option :value="16">16 - 遥调</option>
-                  </select>
-                  <div v-else class="cell-editable">{{ point.functionCode }}</div>
-                </td>
+                  <!-- 功能码：下拉选择 -->
+                  <td @click="startInlineEdit(point, 'functionCode')">
+                    <select
+                      v-if="isEditing(point, 'functionCode')"
+                      v-model.number="inlineEditValue"
+                      class="inline-edit-select"
+                      @change="saveInlineEdit(point, 'functionCode')"
+                      @blur="cancelInlineEdit"
+                      ref="inlineInput"
+                    >
+                      <option :value="1">01 - 遥信</option>
+                      <option :value="2">02 - 遥信</option>
+                      <option :value="3">03 - 遥测</option>
+                      <option :value="4">04 - 遥测</option>
+                      <option :value="5">05 - 遥控</option>
+                      <option :value="6">06 - 遥调</option>
+                      <option :value="15">15 - 遥控</option>
+                      <option :value="16">16 - 遥调</option>
+                    </select>
+                    <div v-else class="cell-editable">{{ point.functionCode }}</div>
+                  </td>
 
-                <!-- 数据类型：下拉选择 -->
-                <td @click="startInlineEdit(point, 'dataType')">
-                  <select v-if="isEditing(point, 'dataType')" v-model="inlineEditValue" class="inline-edit-select" @change="saveInlineEdit(point, 'dataType')" @blur="cancelInlineEdit" ref="inlineInput">
-                    <option v-for="type in dataTypeOptions" :key="type.value" :value="type.value">{{ type.label }}</option>
-                  </select>
-                  <div v-else class="cell-editable">{{ formatDataType(point.dataType) }}</div>
-                </td>
+                  <!-- 数据类型：下拉选择 -->
+                  <td @click="startInlineEdit(point, 'dataType')">
+                    <select
+                      v-if="isEditing(point, 'dataType')"
+                      v-model="inlineEditValue"
+                      class="inline-edit-select"
+                      @change="saveInlineEdit(point, 'dataType')"
+                      @blur="cancelInlineEdit"
+                      ref="inlineInput"
+                    >
+                      <option v-for="type in dataTypeOptions" :key="type.value" :value="type.value">
+                        {{ type.label }}
+                      </option>
+                    </select>
+                    <div v-else class="cell-editable">{{ formatDataType(point.dataType) }}</div>
+                  </td>
 
-                <!-- 缩放因子：数字输入 -->
-                <td @click="startInlineEdit(point, 'scaleFactor')">
-                  <input v-if="isEditing(point, 'scaleFactor')" v-model.number="inlineEditValue" type="number" step="0.01" class="inline-edit-input" @blur="saveInlineEdit(point, 'scaleFactor')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
-                  <div v-else class="cell-editable">{{ point.scaleFactor }}</div>
-                </td>
+                  <!-- 缩放因子：数字输入 -->
+                  <td @click="startInlineEdit(point, 'scaleFactor')">
+                    <input
+                      v-if="isEditing(point, 'scaleFactor')"
+                      v-model.number="inlineEditValue"
+                      type="number"
+                      step="0.01"
+                      class="inline-edit-input"
+                      @blur="saveInlineEdit(point, 'scaleFactor')"
+                      @keyup.enter="$event.target.blur()"
+                      @keyup.escape="cancelInlineEdit"
+                      ref="inlineInput"
+                    />
+                    <div v-else class="cell-editable">{{ point.scaleFactor }}</div>
+                  </td>
 
-                <!-- 偏移量：数字输入 -->
-                <td @click="startInlineEdit(point, 'offset')">
-                  <input v-if="isEditing(point, 'offset')" v-model.number="inlineEditValue" type="number" step="0.01" class="inline-edit-input" @blur="saveInlineEdit(point, 'offset')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
-                  <div v-else class="cell-editable">{{ point.offset }}</div>
-                </td>
+                  <!-- 偏移量：数字输入 -->
+                  <td @click="startInlineEdit(point, 'offset')">
+                    <input
+                      v-if="isEditing(point, 'offset')"
+                      v-model.number="inlineEditValue"
+                      type="number"
+                      step="0.01"
+                      class="inline-edit-input"
+                      @blur="saveInlineEdit(point, 'offset')"
+                      @keyup.enter="$event.target.blur()"
+                      @keyup.escape="cancelInlineEdit"
+                      ref="inlineInput"
+                    />
+                    <div v-else class="cell-editable">{{ point.offset }}</div>
+                  </td>
 
-                <!-- 工程单位：文本输入 -->
-                <td @click="startInlineEdit(point, 'engineeringUnit')">
-                  <input v-if="isEditing(point, 'engineeringUnit')" v-model="inlineEditValue" class="inline-edit-input" @blur="saveInlineEdit(point, 'engineeringUnit')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
-                  <div v-else class="cell-editable">{{ point.engineeringUnit || '--' }}</div>
-                </td>
+                  <!-- 工程单位：文本输入 -->
+                  <td @click="startInlineEdit(point, 'engineeringUnit')">
+                    <input
+                      v-if="isEditing(point, 'engineeringUnit')"
+                      v-model="inlineEditValue"
+                      class="inline-edit-input"
+                      @blur="saveInlineEdit(point, 'engineeringUnit')"
+                      @keyup.enter="$event.target.blur()"
+                      @keyup.escape="cancelInlineEdit"
+                      ref="inlineInput"
+                    />
+                    <div v-else class="cell-editable">{{ point.engineeringUnit || '--' }}</div>
+                  </td>
 
-                <!-- 精度：上下按钮整数切换 -->
-                <td>
-                  <div class="precision-stepper">
-                    <button class="stepper-btn" @click="stepPrecision(point, -1)" :disabled="point.precision <= 0">−</button>
-                    <span class="stepper-value">{{ point.precision }}</span>
-                    <button class="stepper-btn" @click="stepPrecision(point, 1)">+</button>
-                  </div>
-                </td>
+                  <!-- 精度：上下按钮整数切换 -->
+                  <td>
+                    <div class="precision-stepper">
+                      <button
+                        class="stepper-btn"
+                        @click="stepPrecision(point, -1)"
+                        :disabled="point.precision <= 0"
+                      >
+                        −
+                      </button>
+                      <span class="stepper-value">{{ point.precision }}</span>
+                      <button class="stepper-btn" @click="stepPrecision(point, 1)">+</button>
+                    </div>
+                  </td>
 
-                <!-- 字节序：下拉选择 -->
-                <td @click="startInlineEdit(point, 'byteOrder')">
-                  <select v-if="isEditing(point, 'byteOrder')" v-model="inlineEditValue" class="inline-edit-select" @change="saveInlineEdit(point, 'byteOrder')" @blur="cancelInlineEdit" ref="inlineInput">
-                    <option value="big_endian">大端模式</option>
-                    <option value="little_endian">小端模式</option>
-                  </select>
-                  <div v-else class="cell-editable">{{ formatByteOrder(point.byteOrder) }}</div>
-                </td>
+                  <!-- 字节序：下拉选择 -->
+                  <td @click="startInlineEdit(point, 'byteOrder')">
+                    <select
+                      v-if="isEditing(point, 'byteOrder')"
+                      v-model="inlineEditValue"
+                      class="inline-edit-select"
+                      @change="saveInlineEdit(point, 'byteOrder')"
+                      @blur="cancelInlineEdit"
+                      ref="inlineInput"
+                    >
+                      <option value="big_endian">大端模式</option>
+                      <option value="little_endian">小端模式</option>
+                    </select>
+                    <div v-else class="cell-editable">{{ formatByteOrder(point.byteOrder) }}</div>
+                  </td>
 
-                <!-- 最小值：数字输入 -->
-                <td @click="startInlineEdit(point, 'minValue')">
-                  <input v-if="isEditing(point, 'minValue')" v-model.number="inlineEditValue" type="number" class="inline-edit-input" @blur="saveInlineEdit(point, 'minValue')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
-                  <div v-else class="cell-editable">{{ point.minValue }}</div>
-                </td>
+                  <!-- 最小值：数字输入 -->
+                  <td @click="startInlineEdit(point, 'minValue')">
+                    <input
+                      v-if="isEditing(point, 'minValue')"
+                      v-model.number="inlineEditValue"
+                      type="number"
+                      class="inline-edit-input"
+                      @blur="saveInlineEdit(point, 'minValue')"
+                      @keyup.enter="$event.target.blur()"
+                      @keyup.escape="cancelInlineEdit"
+                      ref="inlineInput"
+                    />
+                    <div v-else class="cell-editable">{{ point.minValue }}</div>
+                  </td>
 
-                <!-- 最大值：数字输入 -->
-                <td @click="startInlineEdit(point, 'maxValue')">
-                  <input v-if="isEditing(point, 'maxValue')" v-model.number="inlineEditValue" type="number" class="inline-edit-input" @blur="saveInlineEdit(point, 'maxValue')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
-                  <div v-else class="cell-editable">{{ point.maxValue }}</div>
-                </td>
+                  <!-- 最大值：数字输入 -->
+                  <td @click="startInlineEdit(point, 'maxValue')">
+                    <input
+                      v-if="isEditing(point, 'maxValue')"
+                      v-model.number="inlineEditValue"
+                      type="number"
+                      class="inline-edit-input"
+                      @blur="saveInlineEdit(point, 'maxValue')"
+                      @keyup.enter="$event.target.blur()"
+                      @keyup.escape="cancelInlineEdit"
+                      ref="inlineInput"
+                    />
+                    <div v-else class="cell-editable">{{ point.maxValue }}</div>
+                  </td>
 
-                <!-- 报警点：点击切换 -->
-                <td @click="toggleField(point, 'isWarnPoint')">
-                  <span class="warn-badge toggle-badge" :class="point.isWarnPoint === 1 ? 'warn-yes' : 'warn-no'">
-                    {{ point.isWarnPoint === 1 ? '是' : '否' }}
-                  </span>
-                </td>
+                  <!-- 报警点：点击切换 -->
+                  <td @click="toggleField(point, 'isWarnPoint')">
+                    <span
+                      class="warn-badge toggle-badge"
+                      :class="point.isWarnPoint === 1 ? 'warn-yes' : 'warn-no'"
+                    >
+                      {{ point.isWarnPoint === 1 ? '是' : '否' }}
+                    </span>
+                  </td>
 
-                <!-- 报警下限：数字输入 -->
-                <td @click="startInlineEdit(point, 'warningLow')">
-                  <input v-if="isEditing(point, 'warningLow')" v-model.number="inlineEditValue" type="number" class="inline-edit-input" @blur="saveInlineEdit(point, 'warningLow')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
-                  <div v-else class="cell-editable">{{ point.warningLow }}</div>
-                </td>
+                  <!-- 报警下限：数字输入 -->
+                  <td @click="startInlineEdit(point, 'warningLow')">
+                    <input
+                      v-if="isEditing(point, 'warningLow')"
+                      v-model.number="inlineEditValue"
+                      type="number"
+                      class="inline-edit-input"
+                      @blur="saveInlineEdit(point, 'warningLow')"
+                      @keyup.enter="$event.target.blur()"
+                      @keyup.escape="cancelInlineEdit"
+                      ref="inlineInput"
+                    />
+                    <div v-else class="cell-editable">{{ point.warningLow }}</div>
+                  </td>
 
-                <!-- 报警上限：数字输入 -->
-                <td @click="startInlineEdit(point, 'warningHigh')">
-                  <input v-if="isEditing(point, 'warningHigh')" v-model.number="inlineEditValue" type="number" class="inline-edit-input" @blur="saveInlineEdit(point, 'warningHigh')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
-                  <div v-else class="cell-editable">{{ point.warningHigh }}</div>
-                </td>
+                  <!-- 报警上限：数字输入 -->
+                  <td @click="startInlineEdit(point, 'warningHigh')">
+                    <input
+                      v-if="isEditing(point, 'warningHigh')"
+                      v-model.number="inlineEditValue"
+                      type="number"
+                      class="inline-edit-input"
+                      @blur="saveInlineEdit(point, 'warningHigh')"
+                      @keyup.enter="$event.target.blur()"
+                      @keyup.escape="cancelInlineEdit"
+                      ref="inlineInput"
+                    />
+                    <div v-else class="cell-editable">{{ point.warningHigh }}</div>
+                  </td>
 
-                <!-- 虚拟点位：点击切换 -->
-                <td @click="toggleField(point, 'isVirtual')">
-                  <span class="virtual-badge toggle-badge" :class="point.isVirtual === 1 ? 'virtual-yes' : 'virtual-no'">
-                    {{ point.isVirtual === 1 ? '是' : '否' }}
-                  </span>
-                </td>
+                  <!-- 虚拟点位：点击切换 -->
+                  <td @click="toggleField(point, 'isVirtual')">
+                    <span
+                      class="virtual-badge toggle-badge"
+                      :class="point.isVirtual === 1 ? 'virtual-yes' : 'virtual-no'"
+                    >
+                      {{ point.isVirtual === 1 ? '是' : '否' }}
+                    </span>
+                  </td>
 
-                <!-- 源点值：文本输入 -->
-                <td class="point-source" @click="startInlineEdit(point, 'sourcePointCodes')">
-                  <input v-if="isEditing(point, 'sourcePointCodes')" v-model="inlineEditValue" class="inline-edit-input" @blur="saveInlineEdit(point, 'sourcePointCodes')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
-                  <div v-else class="cell-editable">{{ point.sourcePointCodes || '--' }}</div>
-                </td>
+                  <!-- 源点值：文本输入 -->
+                  <td class="point-source" @click="startInlineEdit(point, 'sourcePointCodes')">
+                    <input
+                      v-if="isEditing(point, 'sourcePointCodes')"
+                      v-model="inlineEditValue"
+                      class="inline-edit-input"
+                      @blur="saveInlineEdit(point, 'sourcePointCodes')"
+                      @keyup.enter="$event.target.blur()"
+                      @keyup.escape="cancelInlineEdit"
+                      ref="inlineInput"
+                    />
+                    <div v-else class="cell-editable">{{ point.sourcePointCodes || '--' }}</div>
+                  </td>
 
-                <!-- 计算表达式：文本输入 -->
-                <td class="point-expression" @click="startInlineEdit(point, 'calculationExpression')">
-                  <input v-if="isEditing(point, 'calculationExpression')" v-model="inlineEditValue" class="inline-edit-input" @blur="saveInlineEdit(point, 'calculationExpression')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
-                  <div v-else class="cell-editable">{{ point.calculationExpression || '--' }}</div>
-                </td>
+                  <!-- 计算表达式：文本输入 -->
+                  <td
+                    class="point-expression"
+                    @click="startInlineEdit(point, 'calculationExpression')"
+                  >
+                    <input
+                      v-if="isEditing(point, 'calculationExpression')"
+                      v-model="inlineEditValue"
+                      class="inline-edit-input"
+                      @blur="saveInlineEdit(point, 'calculationExpression')"
+                      @keyup.enter="$event.target.blur()"
+                      @keyup.escape="cancelInlineEdit"
+                      ref="inlineInput"
+                    />
+                    <div v-else class="cell-editable">
+                      {{ point.calculationExpression || '--' }}
+                    </div>
+                  </td>
 
-                <!-- 描述：文本输入 -->
-                <td @click="startInlineEdit(point, 'description')">
-                  <input v-if="isEditing(point, 'description')" v-model="inlineEditValue" class="inline-edit-input" @blur="saveInlineEdit(point, 'description')" @keyup.enter="$event.target.blur()" @keyup.escape="cancelInlineEdit" ref="inlineInput" />
-                  <div v-else class="cell-editable point-desc" :title="point.description">{{ point.description || '--' }}</div>
-                </td>
+                  <!-- 描述：文本输入 -->
+                  <td @click="startInlineEdit(point, 'description')">
+                    <input
+                      v-if="isEditing(point, 'description')"
+                      v-model="inlineEditValue"
+                      class="inline-edit-input"
+                      @blur="saveInlineEdit(point, 'description')"
+                      @keyup.enter="$event.target.blur()"
+                      @keyup.escape="cancelInlineEdit"
+                      ref="inlineInput"
+                    />
+                    <div v-else class="cell-editable point-desc" :title="point.description">
+                      {{ point.description || '--' }}
+                    </div>
+                  </td>
 
-                <td>{{ formatDateTime(point.updatedTime) }}</td>
-                <td class="fixed-column-action">
-                  <!-- 添加固定列类 -->
-                  <div class="table-actions">
-                    <a class="action-link" @click="editPoint(point)">编辑</a>
-                    <a class="action-link delete" @click="deletePoint(point)">删除</a>
-                  </div>
-                </td>
-              </tr>
+                  <td>{{ formatDateTime(point.updatedTime) }}</td>
+                  <td class="fixed-column-action">
+                    <!-- 添加固定列类 -->
+                    <div class="table-actions">
+                      <a class="action-link" @click="editPoint(point)">编辑</a>
+                      <a class="action-link delete" @click="deletePoint(point)">删除</a>
+                    </div>
+                  </td>
+                </tr>
               </template>
             </tbody>
           </table>
@@ -854,12 +1023,13 @@
                 </div>
               </div>
             </div>
-
           </form>
         </div>
         <div class="dialog-footer">
           <button type="button" class="btn btn-outline" @click="closeGroupDialog">取消</button>
-          <button type="button" class="btn btn-primary" @click="generatePreview">预览生成点位</button>
+          <button type="button" class="btn btn-primary" @click="generatePreview">
+            预览生成点位
+          </button>
           <button
             type="button"
             class="btn btn-success"
@@ -1003,13 +1173,18 @@ export default {
           return 1
         }
         // bit 类型（功能码 03/04）：长度视为 0（共享寄存器）
-        if ((functionCode === 3 || functionCode === 4) && (dataType === 'bit' || dataType.startsWith('bit'))) {
+        if (
+          (functionCode === 3 || functionCode === 4) &&
+          (dataType === 'bit' || dataType.startsWith('bit'))
+        ) {
           return 0
         }
         // 普通寄存器类型
         const intervalMap = {
-          int16: 1, uint16: 1,
-          int32: 2, uint32: 2,
+          int16: 1,
+          uint16: 1,
+          int32: 2,
+          uint32: 2,
           float: 2,
           double: 4,
         }
@@ -1027,8 +1202,10 @@ export default {
     // 判断是否为 bit 类型（功能码 03/04）
     isBitDataType() {
       return (functionCode, dataType) => {
-        return (functionCode === 3 || functionCode === 4) && 
-               (dataType === 'bit' || dataType.startsWith('bit'))
+        return (
+          (functionCode === 3 || functionCode === 4) &&
+          (dataType === 'bit' || dataType.startsWith('bit'))
+        )
       }
     },
 
@@ -1052,8 +1229,8 @@ export default {
       // 批量上限（与后端一致）
       const limits = {
         boolean: 100, // 线圈最多 100 个
-        bit: 100,     // bit 类型最多 100 个
-        normal: 60,   // 普通寄存器最多 60 个
+        bit: 100, // bit 类型最多 100 个
+        normal: 60, // 普通寄存器最多 60 个
       }
 
       sortedPoints.forEach((point) => {
@@ -1061,7 +1238,7 @@ export default {
         const dt = point.dataType
         const isBoolean = this.isBoolean01_02(fc, dt)
         const isBit = this.isBitDataType(fc, dt)
-        const dtFamily = isBoolean ? 'boolean' : (isBit ? 'bit' : 'normal')
+        const dtFamily = isBoolean ? 'boolean' : isBit ? 'bit' : 'normal'
         const pointLength = this.getPointLength(dt, fc)
 
         // 检查是否可以加入现有组
@@ -1071,7 +1248,7 @@ export default {
           const sameFunctionCode = currentGroup.functionCode === fc
           // 数据类型族相同
           const sameDataTypeFamily = currentGroup.dataTypeFamily === dtFamily
-          
+
           let isContinuous = false
           let withinLimit = false
 
@@ -1315,7 +1492,32 @@ export default {
           'bit15',
         ],
 
-        3: ['int16', 'uint16', 'int32', 'uint32', 'float', 'double', 'boolean', 'bit', 'bit0', 'bit1', 'bit2', 'bit3', 'bit4', 'bit5', 'bit6', 'bit7', 'bit8', 'bit9', 'bit10', 'bit11', 'bit12', 'bit13', 'bit14', 'bit15'],
+        3: [
+          'int16',
+          'uint16',
+          'int32',
+          'uint32',
+          'float',
+          'double',
+          'boolean',
+          'bit',
+          'bit0',
+          'bit1',
+          'bit2',
+          'bit3',
+          'bit4',
+          'bit5',
+          'bit6',
+          'bit7',
+          'bit8',
+          'bit9',
+          'bit10',
+          'bit11',
+          'bit12',
+          'bit13',
+          'bit14',
+          'bit15',
+        ],
         4: ['int16', 'uint16', 'int32', 'uint32', 'float', 'double'],
         6: ['int16', 'uint16', 'int32', 'uint32', 'float', 'double'],
         16: ['int16', 'uint16', 'int32', 'uint32', 'float', 'double'],
@@ -1976,7 +2178,8 @@ export default {
           const resData = response.data?.data
           let msg = response.data?.message || '创建点位组失败'
           if (resData?.error) msg += `：${resData.error}`
-          if (resData?.partial_success_count != null) msg += `（已成功 ${resData.partial_success_count} 个）`
+          if (resData?.partial_success_count != null)
+            msg += `（已成功 ${resData.partial_success_count} 个）`
           this.$message.error(msg)
         }
       } catch (err) {
@@ -1984,7 +2187,8 @@ export default {
         const resData = err.response?.data?.data
         let msg = err.response?.data?.message || err.message || '未知错误'
         if (resData?.error) msg += `：${resData.error}`
-        if (resData?.partial_success_count != null) msg += `（已成功 ${resData.partial_success_count} 个）`
+        if (resData?.partial_success_count != null)
+          msg += `（已成功 ${resData.partial_success_count} 个）`
         this.$message.error('创建失败: ' + msg)
       }
     },
@@ -2044,7 +2248,10 @@ export default {
     },
 
     async saveInlineEdit(point, field) {
-      const newVal = typeof this.inlineEditValue === 'string' ? this.inlineEditValue.trim() : this.inlineEditValue
+      const newVal =
+        typeof this.inlineEditValue === 'string'
+          ? this.inlineEditValue.trim()
+          : this.inlineEditValue
       const oldVal = point[field]
       this.inlineEditId = null
       this.inlineEditField = null
@@ -2052,7 +2259,9 @@ export default {
 
       point[field] = newVal
       try {
-        const response = await axios.put('/api/device/model_detail_modbus', { points: [this.buildPointPayload(point)] })
+        const response = await axios.put('/api/device/model_detail_modbus', {
+          points: [this.buildPointPayload(point)],
+        })
         if (response.data && response.data.code === 200) {
           this.$message.success('已更新')
         } else {
@@ -2069,7 +2278,9 @@ export default {
       const oldVal = point[field]
       point[field] = oldVal === 1 ? 0 : 1
       try {
-        const response = await axios.put('/api/device/model_detail_modbus', { points: [this.buildPointPayload(point)] })
+        const response = await axios.put('/api/device/model_detail_modbus', {
+          points: [this.buildPointPayload(point)],
+        })
         if (response.data && response.data.code === 200) {
           this.$message.success('已更新')
         } else {
@@ -2088,7 +2299,9 @@ export default {
       if (newVal === oldVal) return
       point.precision = newVal
       try {
-        const response = await axios.put('/api/device/model_detail_modbus', { points: [this.buildPointPayload(point)] })
+        const response = await axios.put('/api/device/model_detail_modbus', {
+          points: [this.buildPointPayload(point)],
+        })
         if (response.data && response.data.code === 200) {
           this.$message.success('已更新')
         } else {

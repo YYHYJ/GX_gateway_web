@@ -97,6 +97,13 @@
                     }"
                   >
                     <span class="topic-path">{{ topic.topic }}</span>
+                    <button
+                      class="topic-report-btn"
+                      @click.stop="openReportConfig(topic)"
+                      title="配置上报点位"
+                    >
+                      <i class="fas fa-filter"></i> 上报
+                    </button>
                     <span class="topic-qos">QoS {{ topic.qos }}</span>
                     <button
                       class="topic-toggle"
@@ -155,14 +162,24 @@
         </tbody>
       </table>
     </div>
+
+    <!-- 上报点位配置弹窗 -->
+    <ReportPointsConfig
+      v-if="reportConfigTopic"
+      :topic-id="reportConfigTopic.id"
+      :topic-name="reportConfigTopic.topic"
+      @close="reportConfigTopic = null"
+    />
   </div>
 </template>
 
 <script>
 import { createMqttService } from './mqttService.js'
+import ReportPointsConfig from './ReportPointsConfig.vue'
 
 export default {
   name: 'MqttConnectionsManager',
+  components: { ReportPointsConfig },
   props: {
     connections: {
       // ✅ 添加 connections prop
@@ -194,6 +211,7 @@ export default {
       mqttService: null,
       processingOperations: new Set(),
       statusTimer: null,
+      reportConfigTopic: null,
     }
   },
   created() {
@@ -224,11 +242,26 @@ export default {
     async pollStatus() {
       try {
         if (!this.mqttService) return
-        const loadedConnections = await this.mqttService.getAllConnections()
-        this.$emit('connections-loaded', loadedConnections)
+        // 只拉 broker 状态，不重复拉 topic
+        const brokers = await this.mqttService.getBrokers()
+        // 更新现有 connections 的状态字段
+        const updated = this.connections.map((conn) => {
+          const broker = brokers.find((b) => b.id === conn.id)
+          if (broker) {
+            const status = !broker.enabled ? '已禁用' : broker.connected ? '已连接' : '未连接'
+            return { ...conn, status, enabled: Boolean(broker.enabled) }
+          }
+          return conn
+        })
+        this.$emit('connections-loaded', updated)
       } catch (e) {
         // 静默失败，不影响界面
       }
+    },
+
+    // 打开上报点位配置
+    openReportConfig(topic) {
+      this.reportConfigTopic = topic
     },
 
     // 初始化服务
@@ -1014,6 +1047,30 @@ export default {
   font-size: 15px;
 }
 
+
+/* 上报点位按钮 */
+.topic-report-btn {
+  font-size: 11px;
+  padding: 2px 8px;
+  border: 1px solid #8e44ad;
+  border-radius: 3px;
+  cursor: pointer;
+  background: #fff;
+  color: #8e44ad;
+  font-weight: 500;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.topic-report-btn:hover {
+  background: #8e44ad;
+  color: #fff;
+}
+
+.topic-report-btn i {
+  margin-right: 2px;
+}
 
 /* 滚动条样式 */
 .topics-list::-webkit-scrollbar {

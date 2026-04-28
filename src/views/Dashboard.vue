@@ -109,7 +109,7 @@
             <i class="fas fa-clock"></i>
             最后更新: {{ lastHardwareUpdate }}
           </div>
-          <div class="polling-controls">
+          <div class="polling-controls" style="display: none">
             <button
               class="btn btn-sm"
               :class="hardwarePollingActive ? 'btn-warning' : 'btn-success'"
