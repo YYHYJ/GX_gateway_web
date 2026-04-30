@@ -97,13 +97,16 @@
                     }"
                   >
                     <span class="topic-path">{{ topic.topic }}</span>
-                    <button
-                      class="topic-report-btn"
-                      @click.stop="openReportConfig(topic)"
-                      title="配置上报点位"
+                    <select
+                      class="topic-scheme-select"
+                      :value="String(topic.scheme_id || '')"
+                      @click.stop
+                      @change="bindScheme(topic.id, $event.target.value)"
+                      title="绑定上报方案"
                     >
-                      <i class="fas fa-filter"></i> 上报
-                    </button>
+                      <option value="">未绑定方案</option>
+                      <option v-for="s in schemes" :key="s.id" :value="String(s.id)">{{ s.scheme_name }}</option>
+                    </select>
                     <span class="topic-qos">QoS {{ topic.qos }}</span>
                     <button
                       class="topic-toggle"
@@ -162,24 +165,14 @@
         </tbody>
       </table>
     </div>
-
-    <!-- 上报点位配置弹窗 -->
-    <ReportPointsConfig
-      v-if="reportConfigTopic"
-      :topic-id="reportConfigTopic.id"
-      :topic-name="reportConfigTopic.topic"
-      @close="reportConfigTopic = null"
-    />
   </div>
 </template>
 
 <script>
 import { createMqttService } from './mqttService.js'
-import ReportPointsConfig from './ReportPointsConfig.vue'
 
 export default {
   name: 'MqttConnectionsManager',
-  components: { ReportPointsConfig },
   props: {
     connections: {
       // ✅ 添加 connections prop
@@ -211,13 +204,14 @@ export default {
       mqttService: null,
       processingOperations: new Set(),
       statusTimer: null,
-      reportConfigTopic: null,
+      schemes: [],
     }
   },
   created() {
     this.initializeService()
     this.loadConnections()
     this.startStatusPolling()
+    this.loadSchemes()
   },
   beforeDestroy() {
     this.stopStatusPolling()
@@ -256,6 +250,32 @@ export default {
         this.$emit('connections-loaded', updated)
       } catch (e) {
         // 静默失败，不影响界面
+      }
+    },
+
+    // 加载方案列表
+    async loadSchemes() {
+      try {
+        const res = await this.$axios.get('/api/mqtt/scheme')
+        if (res && res.code === 200 && Array.isArray(res.data)) {
+          this.schemes = res.data
+        }
+      } catch (e) {
+        console.error('加载方案列表失败:', e)
+      }
+    },
+
+    // 绑定/解绑方案
+    async bindScheme(topicId, schemeId) {
+      try {
+        await this.$axios.put('/api/mqtt/topic/bindscheme', {
+          topic_id: topicId,
+          scheme_id: schemeId ? Number(schemeId) : null,
+        })
+        this.$message && this.$message.success(schemeId ? '已绑定方案' : '已解绑方案')
+        await this.loadConnections()
+      } catch (e) {
+        this.$message && this.$message.error('绑定失败: ' + (e.message || '未知错误'))
       }
     },
 
@@ -1048,28 +1068,22 @@ export default {
 }
 
 
-/* 上报点位按钮 */
-.topic-report-btn {
-  font-size: 11px;
-  padding: 2px 8px;
-  border: 1px solid #8e44ad;
+/* 方案绑定下拉框 */
+.topic-scheme-select {
+  padding: 2px 6px;
+  border: 1px solid #d1d9e6;
   border-radius: 3px;
-  cursor: pointer;
+  font-size: 11px;
+  color: #2c3e50;
   background: #fff;
-  color: #8e44ad;
-  font-weight: 500;
-  transition: all 0.2s;
+  cursor: pointer;
   flex-shrink: 0;
-  white-space: nowrap;
+  max-width: 120px;
 }
 
-.topic-report-btn:hover {
-  background: #8e44ad;
-  color: #fff;
-}
-
-.topic-report-btn i {
-  margin-right: 2px;
+.topic-scheme-select:focus {
+  outline: none;
+  border-color: #8e44ad;
 }
 
 /* 滚动条样式 */

@@ -23,7 +23,10 @@
           @connections-error="handleConnectionsError"
         />
 
-        <!-- 2. 配置区域（新增或编辑） -->
+        <!-- 2. 上报方案管理 -->
+        <SchemeManager @schemes-changed="onSchemesChanged" />
+
+        <!-- 3. 配置区域（新增或编辑） -->
         <div v-if="isEditing || isCreating" class="config-area">
           <!-- 配置标题 -->
           <div class="config-header">
@@ -167,6 +170,7 @@
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import MqttConnectionsManager from '@/views/transform/mqtt/MqttConnectionsManager.vue'
+import SchemeManager from '@/views/transform/mqtt/SchemeManager.vue'
 import BasicConfig from '@/views/transform/mqtt/BasicConfig.vue'
 import AuthConfig from '@/views/transform/mqtt/AuthConfig.vue'
 import TopicManager from '@/views/transform/mqtt/TopicManager.vue'
@@ -180,6 +184,7 @@ export default {
     MainLayout,
     PageHeader,
     MqttConnectionsManager,
+    SchemeManager,
     BasicConfig,
     AuthConfig,
     TopicManager,
@@ -718,6 +723,12 @@ export default {
     handleConnectionsError(error) {
       console.error('加载连接数据失败:', error)
       this.showError('加载MQTT连接配置失败: ' + error.message)
+    },
+
+    onSchemesChanged() {
+      if (this.$refs.connectionsManager) {
+        this.$refs.connectionsManager.loadSchemes()
+      }
     },
     // 消息提示
     showSuccess(message) {

@@ -88,6 +88,7 @@ export function formatDbToFrontend(brokersData = [], topicsData = []) {
         retain: false,
         enabled: Boolean(topic[DB_FIELDS.TOPICS.ENABLED]),
         description: topic[DB_FIELDS.TOPICS.DESCRIPTION] || '',
+        scheme_id: topic.scheme_id || null,
       }))
 
     const subscribeTopics = brokerTopics

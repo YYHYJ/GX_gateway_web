@@ -159,18 +159,6 @@ export default {
       breadcrumbs: [{ title: '数据采集', link: '/data-collection' }, { title: '设备模板' }],
       pageActions: [
         {
-          text: '导入模板',
-          icon: 'fas fa-upload',
-          type: 'outline',
-          handler: this.handleImport,
-        },
-        {
-          text: '导出模板',
-          icon: 'fas fa-download',
-          type: 'outline',
-          handler: this.handleExport,
-        },
-        {
           text: '新建模板',
           icon: 'fas fa-plus',
           type: 'primary',

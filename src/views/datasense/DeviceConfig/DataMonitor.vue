@@ -89,6 +89,13 @@
                 <i class="fas fa-table"></i>
                 实时数据
               </h3>
+              <div class="data-search">
+                <i class="fas fa-search"></i>
+                <input type="text" v-model="searchText" placeholder="搜索点位名称/代码..." />
+                <button v-if="searchText" class="search-clear" @click="searchText = ''">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
             </div>
 
             <div class="table-container">
@@ -104,7 +111,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(point, index) in realtimeData" :key="point.point_code">
+                  <tr v-for="(point, index) in filteredRealtimeData" :key="point.point_code">
                     <td>{{ index + 1 }}</td>
                     <td class="data-cell name-cell">{{ getPointDisplayName(point.point_code) }}</td>
                     <td class="data-cell code-cell">
@@ -169,6 +176,7 @@ export default {
       realtimeData: [],
       loadingData: true,
       lastUpdateTime: null,
+      searchText: '',
     }
   },
 
@@ -192,6 +200,15 @@ export default {
         'status-online': this.deviceInfo.status === 'online',
         'status-offline': this.deviceInfo.status !== 'online',
       }
+    },
+    filteredRealtimeData() {
+      if (!this.searchText.trim()) return this.realtimeData
+      const q = this.searchText.trim().toLowerCase()
+      return this.realtimeData.filter(
+        (p) =>
+          (p.point_code || '').toLowerCase().includes(q) ||
+          this.getPointDisplayName(p.point_code).toLowerCase().includes(q),
+      )
     },
   },
 
@@ -605,6 +622,42 @@ export default {
   align-items: center;
   gap: 8px;
 }
+
+.data-search {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e1e5e9;
+  border-radius: 6px;
+  padding: 0 12px;
+  background: #fff;
+  gap: 8px;
+  min-width: 260px;
+}
+
+.data-search i { color: #95a5a6; font-size: 13px; }
+
+.data-search input {
+  border: none;
+  outline: none;
+  padding: 8px 0;
+  font-size: 14px;
+  color: #2c3e50;
+  flex: 1;
+  background: transparent;
+}
+
+.data-search input::placeholder { color: #bdc3c7; }
+
+.search-clear {
+  background: none;
+  border: none;
+  color: #bdc3c7;
+  cursor: pointer;
+  padding: 2px;
+  font-size: 12px;
+}
+
+.search-clear:hover { color: #e74c3c; }
 
 .table-container {
   overflow-x: auto;

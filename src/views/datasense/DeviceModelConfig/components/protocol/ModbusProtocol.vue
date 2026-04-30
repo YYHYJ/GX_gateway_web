@@ -1212,7 +1212,7 @@ export default {
     // 分组后的点位列表（与后端 create_register_groups 逻辑一致）
     groupedPoints() {
       if (!this.showGrouping || !this.allPoints || this.allPoints.length === 0) {
-        return this.allPoints.map((point, index) => ({
+        return this.points.map((point, index) => ({
           ...point,
           _groupId: `single-${index}`,
           _isGroupHeader: false,
@@ -1666,6 +1666,12 @@ export default {
 
       this.filteredPoints = filtered
       this.updatePagination()
+
+      // 有搜索/筛选条件时自动关闭分组显示
+      if (this.hasSearchFilter && this.showGrouping) {
+        this.showGrouping = false
+        this.collapsedGroups = {}
+      }
     },
 
     transformPoints(records) {

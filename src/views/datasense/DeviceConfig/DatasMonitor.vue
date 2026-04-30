@@ -179,12 +179,19 @@
                 <div class="data-title">
                   <i class="fas fa-table"></i>
                   <h3>实时监控</h3>
-                  <span class="data-count">{{ realtimeData.length }} 个数据点</span>
+                  <span class="data-count">{{ filteredRealtimeData.length }}/{{ realtimeData.length }} 个数据点</span>
                   <span class="writable-count" v-if="writablePointsCount > 0">
                     ({{ writablePointsCount }} 个可写)
                   </span>
                 </div>
                 <div class="data-controls">
+                  <div class="data-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" v-model="searchText" placeholder="搜索点位代码..." />
+                    <button v-if="searchText" class="search-clear" @click="searchText = ''">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
                   <div class="data-update" v-if="lastUpdateTime">
                     更新: {{ formatTime(lastUpdateTime) }}
                   </div>
@@ -211,7 +218,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(point, index) in realtimeData" :key="point.point_code">
+                    <tr v-for="(point, index) in filteredRealtimeData" :key="point.point_code">
                       <td class="index-cell">{{ index + 1 }}</td>
                       <td class="code-cell">
                         <span class="code-text">{{ point.point_code }}</span>
@@ -316,6 +323,7 @@ export default {
       realtimeData: [],
       loadingData: false,
       lastUpdateTime: null,
+      searchText: '',
 
       // 调试模式相关
       isDebugMode: false,
@@ -364,6 +372,11 @@ export default {
   },
 
   computed: {
+    filteredRealtimeData() {
+      if (!this.searchText.trim()) return this.realtimeData
+      const q = this.searchText.trim().toLowerCase()
+      return this.realtimeData.filter((p) => (p.point_code || '').toLowerCase().includes(q))
+    },
     writablePointsCount() {
       if (!this.realtimeData || !Array.isArray(this.realtimeData)) return 0
       return this.realtimeData.filter((point) => point.writable).length
@@ -1665,6 +1678,42 @@ export default {
   align-items: center;
   gap: 12px;
 }
+
+.data-search {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e1e5e9;
+  border-radius: 6px;
+  padding: 0 10px;
+  background: #fff;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.data-search i { color: #95a5a6; font-size: 13px; }
+
+.data-search input {
+  border: none;
+  outline: none;
+  padding: 6px 0;
+  font-size: 13px;
+  color: #2c3e50;
+  flex: 1;
+  background: transparent;
+}
+
+.data-search input::placeholder { color: #bdc3c7; }
+
+.search-clear {
+  background: none;
+  border: none;
+  color: #bdc3c7;
+  cursor: pointer;
+  padding: 2px;
+  font-size: 12px;
+}
+
+.search-clear:hover { color: #e74c3c; }
 
 .data-update {
   font-size: 13px;
