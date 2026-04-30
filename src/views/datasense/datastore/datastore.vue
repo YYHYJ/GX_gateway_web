@@ -11,6 +11,59 @@
       <PageHeader title="数据存储配置" :breadcrumbs="breadcrumbs" />
 
       <div class="data-store-content">
+        <!-- 初始化检测中 -->
+        <div v-if="setupLoading" class="setup-loading">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>正在检测 InfluxDB 状态...</span>
+        </div>
+
+        <!-- 未初始化：显示初始化表单 -->
+        <div v-else-if="needSetup" class="setup-section">
+          <div class="setup-card">
+            <div class="setup-header">
+              <i class="fas fa-database"></i>
+              <h3>InfluxDB 初始化</h3>
+            </div>
+            <p class="setup-desc">InfluxDB 服务尚未初始化，请填写以下信息完成配置</p>
+            <div class="setup-form">
+              <div class="setup-field">
+                <label>管理员用户名 <span class="required">*</span></label>
+                <input type="text" v-model="setupForm.username" placeholder="如 admin" />
+              </div>
+              <div class="setup-field">
+                <label>密码 <span class="required">*</span></label>
+                <input type="password" v-model="setupForm.password" placeholder="至少 8 位" />
+                <span v-if="setupForm.password && setupForm.password.length < 8" class="setup-field-error">
+                  密码长度不足 8 位（InfluxDB 要求）
+                </span>
+              </div>
+              <div class="setup-field">
+                <label>组织名称 <span class="required">*</span></label>
+                <input type="text" v-model="setupForm.org_name" placeholder="如 my_company" />
+              </div>
+              <div class="setup-field">
+                <label>Bucket 名称 <span class="required">*</span></label>
+                <input type="text" v-model="setupForm.bucket_name" placeholder="如 device_data" />
+              </div>
+            </div>
+            <div class="setup-actions">
+              <button
+                class="btn btn-primary"
+                @click="doSetup"
+                :disabled="setupSubmitting || !setupFormValid"
+              >
+                <i class="fas" :class="setupSubmitting ? 'fa-spinner fa-spin' : 'fa-play'"></i>
+                {{ setupSubmitting ? '初始化中...' : '开始初始化' }}
+              </button>
+            </div>
+            <div v-if="setupError" class="setup-error">
+              <i class="fas fa-exclamation-circle"></i> {{ setupError }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 已初始化：显示配置管理 -->
+        <template v-else>
         <!-- 1. InfluxDB配置概览 -->
         <div class="config-overview">
           <div class="overview-header">
@@ -343,6 +396,7 @@
             </div>
           </div>
         </div>
+        </template>
       </div>
     </div>
   </MainLayout>
@@ -413,6 +467,25 @@ const isLoading = ref(true)
 const loadError = ref(null)
 const isSaving = ref(false)
 
+// 初始化相关
+const setupLoading = ref(true)
+const needSetup = ref(false)
+const setupSubmitting = ref(false)
+const setupError = ref('')
+const setupForm = reactive({
+  username: '',
+  password: '',
+  org_name: '',
+  bucket_name: 'device_data',
+})
+const setupFormValid = computed(() =>
+  setupForm.username.trim() &&
+  setupForm.password.trim() &&
+  setupForm.password.length >= 8 &&
+  setupForm.org_name.trim() &&
+  setupForm.bucket_name.trim()
+)
+
 // 可选取值方式（从后端加载）
 const availableFunctions = ref([
   { value: 'last', label: '最新值(取窗口内最后一个真实值)' },
@@ -427,10 +500,10 @@ const allIntervalsValid = computed(() =>
 
 // 计算属性
 const influxDBUIUrl = computed(() => {
-  if (!influxdbConfig.host || !influxdbConfig.port) {
+  if (!influxdbConfig.port) {
     return ''
   }
-  return `http://${influxdbConfig.host}:${influxdbConfig.port}`
+  return `http://${window.location.hostname}:${influxdbConfig.port}`
 })
 
 // 方法
@@ -542,7 +615,7 @@ const saveConfig = async () => {
     })
 
     await loadConfigFromBackend()
-    alert('策略配置保存成功！')
+    alert('策略配置保存成功！需要重启程序后生效。')
   } catch (error) {
     console.error('保存配置失败:', error)
     alert('保存配置失败: ' + (error.message || '请检查网络连接'))
@@ -558,9 +631,62 @@ const resetToDefaults = () => {
 }
 
 // 生命周期钩子
-onMounted(() => {
-  loadConfigFromBackend()
+onMounted(async () => {
+  await checkSetupStatus()
 })
+
+// 检查 InfluxDB 初始化状态
+const checkSetupStatus = async () => {
+  setupLoading.value = true
+  try {
+    const response = await request({
+      url: '/api/influxdb/setup_status',
+      method: 'GET',
+    })
+    const result = response.data
+    if (result && result.allowed === true) {
+      needSetup.value = true
+    } else {
+      needSetup.value = false
+      await loadConfigFromBackend()
+    }
+  } catch (error) {
+    // 接口不存在或报错，假定已初始化，直接加载配置
+    needSetup.value = false
+    await loadConfigFromBackend()
+  } finally {
+    setupLoading.value = false
+  }
+}
+
+// 执行 InfluxDB 初始化
+const doSetup = async () => {
+  setupSubmitting.value = true
+  setupError.value = ''
+  try {
+    const response = await request({
+      url: '/api/influxdb/setup',
+      method: 'POST',
+      data: {
+        username: setupForm.username,
+        password: setupForm.password,
+        org_name: setupForm.org_name,
+        bucket_name: setupForm.bucket_name,
+      },
+    })
+    if (response.data && response.code === 200) {
+      alert('InfluxDB 初始化成功！')
+      needSetup.value = false
+      await loadConfigFromBackend()
+    } else {
+      setupError.value = response.message || '初始化失败'
+    }
+  } catch (error) {
+    setupError.value = error.message || '初始化失败，请检查 InfluxDB 服务是否运行'
+  } finally {
+    setupSubmitting.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -568,6 +694,123 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+/* 初始化状态 */
+.setup-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 60px 20px;
+  color: #3498db;
+  font-size: 15px;
+}
+
+.setup-section {
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.setup-card {
+  background: #fff;
+  border: 1px solid #e1e5e9;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  padding: 36px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.setup-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.setup-header i {
+  font-size: 22px;
+  color: #3498db;
+}
+
+.setup-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.setup-desc {
+  color: #7f8c8d;
+  font-size: 14px;
+  margin: 0 0 24px;
+}
+
+.setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.setup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.setup-field label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #34495e;
+}
+
+.setup-field .required {
+  color: #e74c3c;
+}
+
+.setup-field input {
+  padding: 10px 12px;
+  border: 1.5px solid #e1e5e9;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #2c3e50;
+}
+
+.setup-field input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.setup-actions {
+  margin-top: 20px;
+}
+
+.setup-actions .btn {
+  width: 100%;
+  justify-content: center;
+  padding: 12px;
+  font-size: 15px;
+}
+
+.setup-error {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: #fdecea;
+  border: 1px solid #f5c6cb;
+  border-radius: 6px;
+  color: #c0392b;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.setup-field-error {
+  font-size: 12px;
+  color: #e74c3c;
 }
 
 /* InfluxDB配置概览 */
