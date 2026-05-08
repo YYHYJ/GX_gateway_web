@@ -86,7 +86,11 @@
                 <!-- 密码强度 -->
                 <div class="strength-bar" v-if="form.newPassword">
                   <div class="strength-track">
-                    <div class="strength-fill" :class="strengthClass" :style="{ width: strengthPercent }"></div>
+                    <div
+                      class="strength-fill"
+                      :class="strengthClass"
+                      :style="{ width: strengthPercent }"
+                    ></div>
                   </div>
                   <span class="strength-text" :class="strengthClass">{{ strengthText }}</span>
                 </div>
@@ -116,14 +120,25 @@
               <div class="password-rules">
                 <div class="rules-title"><i class="fas fa-info-circle"></i> 密码要求</div>
                 <ul>
-                  <li :class="{ met: rules.length }"><i class="fas" :class="rules.length ? 'fa-check-circle' : 'fa-circle'"></i> 长度不少于 8 位</li>
-                  <li :class="{ met: rules.upper }"><i class="fas" :class="rules.upper ? 'fa-check-circle' : 'fa-circle'"></i> 包含大写字母</li>
-                  <li :class="{ met: rules.lower }"><i class="fas" :class="rules.lower ? 'fa-check-circle' : 'fa-circle'"></i> 包含小写字母</li>
-                  <li :class="{ met: rules.number }"><i class="fas" :class="rules.number ? 'fa-check-circle' : 'fa-circle'"></i> 包含数字</li>
+                  <li :class="{ met: rules.length }">
+                    <i class="fas" :class="rules.length ? 'fa-check-circle' : 'fa-circle'"></i>
+                    长度不少于 8 位
+                  </li>
+                  <li :class="{ met: rules.lower }">
+                    <i class="fas" :class="rules.lower ? 'fa-check-circle' : 'fa-circle'"></i>
+                    包含小写字母
+                  </li>
+                  <li :class="{ met: rules.number }">
+                    <i class="fas" :class="rules.number ? 'fa-check-circle' : 'fa-circle'"></i>
+                    包含数字
+                  </li>
                 </ul>
               </div>
 
-              <div class="card-footer" style="justify-content: flex-end; border-top: none; padding: 16px 0 0;">
+              <div
+                class="card-footer"
+                style="justify-content: flex-end; border-top: none; padding: 16px 0 0"
+              >
                 <button
                   class="btn btn-primary"
                   @click="handleSubmit"
@@ -168,7 +183,6 @@ export default {
       const p = this.form.newPassword
       return {
         length: p.length >= 8,
-        upper: /[A-Z]/.test(p),
         lower: /[a-z]/.test(p),
         number: /[0-9]/.test(p),
       }
@@ -180,7 +194,6 @@ export default {
       return (
         this.form.oldPassword &&
         this.rules.length &&
-        this.rules.upper &&
         this.rules.lower &&
         this.rules.number &&
         this.passwordMatch &&
@@ -206,7 +219,7 @@ export default {
 
     checkStrength() {
       const r = this.rules
-      this.strength = [r.length, r.upper, r.lower, r.number].filter(Boolean).length
+      this.strength = [r.length, r.lower, r.number].filter(Boolean).length
     },
 
     handleSubmit() {
@@ -300,13 +313,23 @@ export default {
 .strength-fill {
   height: 100%;
   border-radius: 2px;
-  transition: width 0.3s, background 0.3s;
+  transition:
+    width 0.3s,
+    background 0.3s;
 }
 
-.strength-fill.weak { background: #e74c3c; }
-.strength-fill.medium { background: #f39c12; }
-.strength-fill.strong { background: #3498db; }
-.strength-fill.very-strong { background: #2ecc71; }
+.strength-fill.weak {
+  background: #e74c3c;
+}
+.strength-fill.medium {
+  background: #f39c12;
+}
+.strength-fill.strong {
+  background: #3498db;
+}
+.strength-fill.very-strong {
+  background: #2ecc71;
+}
 
 .strength-text {
   font-size: 12px;
@@ -314,10 +337,18 @@ export default {
   min-width: 32px;
 }
 
-.strength-text.weak { color: #e74c3c; }
-.strength-text.medium { color: #f39c12; }
-.strength-text.strong { color: #3498db; }
-.strength-text.very-strong { color: #2ecc71; }
+.strength-text.weak {
+  color: #e74c3c;
+}
+.strength-text.medium {
+  color: #f39c12;
+}
+.strength-text.strong {
+  color: #3498db;
+}
+.strength-text.very-strong {
+  color: #2ecc71;
+}
 
 /* 密码规则 */
 .password-rules {

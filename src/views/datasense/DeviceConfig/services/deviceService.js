@@ -124,6 +124,40 @@ export const deviceService = {
     }
   },
 
+  // 切换设备启用状态
+  async toggleDeviceEnabled(deviceId, enabled) {
+    try {
+      // 从本地数据中查找设备（避免调用不存在的详情接口）
+      const response = await apiClient.get('/device/config')
+      
+      if (response.data.code !== 200 || !response.data.data?.devices) {
+        throw new Error('获取设备列表失败')
+      }
+
+      // 找到对应的设备
+      const deviceData = response.data.data.devices.find(d => d.id === deviceId)
+      
+      if (!deviceData) {
+        throw new Error('设备不存在')
+      }
+
+      // 更新 is_enabled 字段
+      deviceData.is_enabled = enabled
+
+      // 调用更新接口 - 使用 PUT /api/device/config
+      const updateResponse = await apiClient.put('/device/config', deviceData)
+      
+      if (updateResponse.data.code === 200) {
+        messageService.success(`设备${enabled ? '启用' : '禁用'}成功`)
+        return updateResponse.data
+      } else {
+        throw new Error(updateResponse.data.message || '更新设备失败')
+      }
+    } catch (error) {
+      throw this.handleApiError(error)
+    }
+  },
+
   // 获取模板列表
   async getDeviceTemplates() {
     try {

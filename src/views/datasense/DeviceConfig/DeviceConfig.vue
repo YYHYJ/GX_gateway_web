@@ -51,6 +51,7 @@
                   <th>通信状态</th>
                   <th>采集间隔</th>
                   <th>创建时间</th>
+                  <th>启用状态</th>
                   <th class="fixed-column-action" style="width: 200px">操作</th>
                 </tr>
               </thead>
@@ -71,6 +72,22 @@
                   </td>
                   <td>{{ instance.interval }}ms</td>
                   <td>{{ instance.createTime }}</td>
+                  <td>
+                    <div class="toggle-switch-container">
+                      <label class="toggle-switch">
+                        <input 
+                          type="checkbox" 
+                          :checked="instance.isEnabled"
+                          @change="handleToggleEnabled(instance)"
+                          :disabled="togglingDevices.has(instance.id)"
+                        />
+                        <span class="toggle-slider"></span>
+                      </label>
+                      <span class="toggle-text">
+                        {{ togglingDevices.has(instance.id) ? '切换中...' : (instance.isEnabled ? '已启用' : '已禁用') }}
+                      </span>
+                    </div>
+                  </td>
                   <td class="fixed-column-action">
                     <div class="table-actions">
                       <a class="action-link" @click="handleMonitor(instance.id)">监控</a>
@@ -171,6 +188,7 @@ export default {
       showEditModal: false,
       editingDeviceId: null,
       statusPollingTimer: null,
+      togglingDevices: new Set(), // 记录正在切换状态的设备
     }
   },
   created() {
@@ -388,6 +406,25 @@ export default {
         },
       })
     },
+
+    handleToggleEnabled(instance) {
+      const { id, isEnabled } = instance
+      this.togglingDevices.add(id)
+      
+      deviceService.toggleDeviceEnabled(id, !isEnabled)
+        .then(() => {
+          // 重新获取设备列表，确保数据完全同步
+          this.fetchDeviceInstances()
+          this.$message.success(`设备 ${isEnabled ? '禁用' : '启用'} 成功`)
+        })
+        .catch((error) => {
+          this.$message.error(`设备 ${isEnabled ? '禁用' : '启用'} 失败: ${error.message}`)
+          // 失败时不重新加载，保持原状态
+        })
+        .finally(() => {
+          this.togglingDevices.delete(id)
+        })
+    },
   },
 }
 </script>
@@ -535,5 +572,62 @@ export default {
   .action-link {
     padding: 2px 4px;
   }
+}
+
+/* 切换开关样式 */
+.toggle-switch-container {
+  display: flex;
+  align-items: center;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 34px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: #2196f3;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+.toggle-text {
+  margin-left: 10px;
+  font-size: 14px;
+  color: #555;
 }
 </style>

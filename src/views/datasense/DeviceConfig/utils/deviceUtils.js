@@ -76,6 +76,7 @@ export const dataTransform = {
       protocol: device.protocol_type?.name || '',
       protocolDisplay: protocolUtils.getProtocolDisplayName(device.protocol_type?.name || ''),
       status: deviceStatus.calculateDeviceStatus(device),
+      isEnabled: device.is_enabled !== false, // 与模态框逻辑保持一致：只有明确为false时才禁用
       points: 0, // 需要从其他接口获取
       interval: device.scan_interval,
       createTime: this.formatCreateTime(device.created_at),

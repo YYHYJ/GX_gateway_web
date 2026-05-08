@@ -44,17 +44,32 @@ export function updateDefaultRoute(data) {
 
 // ========== VPN ==========
 
-// 获取 VPN 配置及连接状态
+// 获取 VPN 配置
 export function getVpnConfig() {
-  return request({ url: '/api/network/vpn', method: 'get' })
+  return request({ url: '/api/vpn/config', method: 'get' })
 }
 
-// 保存 VPN 配置
+// 更新 VPN 配置
 export function updateVpnConfig(data) {
-  return request({ url: '/api/network/vpn', method: 'put', data })
+  return request({ url: '/api/vpn/config', method: 'post', data })
 }
 
-// VPN 连接/断开
-export function vpnConnect(action) {
-  return request({ url: '/api/network/vpn/connection', method: 'post', data: { action } })
+// 获取 VPN 连接状态
+export function getVpnStatus() {
+  return request({ url: '/api/vpn/status', method: 'get' })
+}
+
+// 启动 VPN
+export function startVpn() {
+  return request({ url: '/api/vpn/start', method: 'post' })
+}
+
+// 停止 VPN
+export function stopVpn() {
+  return request({ url: '/api/vpn/stop', method: 'post' })
+}
+
+// 重启 VPN
+export function restartVpn() {
+  return request({ url: '/api/vpn/restart', method: 'post' })
 }
