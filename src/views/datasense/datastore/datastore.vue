@@ -280,7 +280,7 @@
 
                   <div class="tier-form-group">
                     <label>
-                      <i class="fas fa-filter"></i>
+                      <i class="fas fa-wave-square"></i>
                       取值方式
                     </label>
                     <div class="function-options">
@@ -347,7 +347,7 @@
 
                   <div class="tier-form-group">
                     <label>
-                      <i class="fas fa-chart-bar"></i>
+                      <i class="fas fa-wave-square"></i>
                       取值方式
                     </label>
                     <div class="function-options">

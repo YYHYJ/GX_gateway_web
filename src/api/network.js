@@ -73,3 +73,21 @@ export function stopVpn() {
 export function restartVpn() {
   return request({ url: '/api/vpn/restart', method: 'post' })
 }
+
+// ========== 用户管理 ==========
+
+// 修改用户密码
+export function changePassword(data) {
+  // 尝试1: POST /api/user/password (不带斜杠)
+  return request({ url: '/api/user/password', method: 'post', data })
+  
+  // 如果上面不行，尝试下面这些：
+  // 尝试2: PUT /api/user/password (按文档)
+  // return request({ url: '/api/user/password', method: 'put', data })
+  
+  // 尝试3: POST /api/user/change-password
+  // return request({ url: '/api/user/change-password', method: 'post', data })
+  
+  // 尝试4: POST /api/auth/password
+  // return request({ url: '/api/auth/password', method: 'post', data })
+}

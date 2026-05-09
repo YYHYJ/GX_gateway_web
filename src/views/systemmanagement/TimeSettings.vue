@@ -24,7 +24,7 @@
             <div class="current-time-display">
               <div class="time-main">{{ currentTime }}</div>
               <div class="time-date">{{ currentDate }}</div>
-              <div class="time-zone">时区：{{ form.timezone }}</div>
+              <div class="time-zone">时区：{{ displayTimezoneLabel }}</div>
             </div>
           </div>
         </div>
@@ -191,7 +191,10 @@ export default {
       currentTime: '',
       currentDate: '',
       serverTime: null,
+      currentDisplayTimezone: 'UTC+8', // 当前显示的时区
       timer: null,
+      syncTimer: null, // 定期同步定时器
+      lastUpdateTime: null, // 上次更新的时间戳
       form: {
         timezone: 'UTC+8',
         syncMode: 'ntp',
@@ -206,33 +209,40 @@ export default {
         },
       },
       timezones: [
-        { value: 'UTC-12', label: 'UTC-12' },
-        { value: 'UTC-11', label: 'UTC-11' },
-        { value: 'UTC-10', label: 'UTC-10' },
-        { value: 'UTC-9', label: 'UTC-9' },
-        { value: 'UTC-8', label: 'UTC-8' },
-        { value: 'UTC-7', label: 'UTC-7' },
-        { value: 'UTC-6', label: 'UTC-6' },
-        { value: 'UTC-5', label: 'UTC-5' },
-        { value: 'UTC-4', label: 'UTC-4' },
-        { value: 'UTC-3', label: 'UTC-3' },
-        { value: 'UTC-2', label: 'UTC-2' },
-        { value: 'UTC-1', label: 'UTC-1' },
-        { value: 'UTC+0', label: 'UTC+0' },
-        { value: 'UTC+1', label: 'UTC+1' },
-        { value: 'UTC+2', label: 'UTC+2' },
-        { value: 'UTC+3', label: 'UTC+3' },
-        { value: 'UTC+4', label: 'UTC+4' },
-        { value: 'UTC+5', label: 'UTC+5' },
-        { value: 'UTC+5:30', label: 'UTC+5:30' },
-        { value: 'UTC+6', label: 'UTC+6' },
-        { value: 'UTC+7', label: 'UTC+7' },
-        { value: 'UTC+8', label: 'UTC+8' },
-        { value: 'UTC+9', label: 'UTC+9' },
-        { value: 'UTC+10', label: 'UTC+10' },
-        { value: 'UTC+11', label: 'UTC+11' },
-        { value: 'UTC+12', label: 'UTC+12' },
+        { value: 'UTC-12', label: 'UTC-12 (国际日期变更线西侧)' },
+        { value: 'UTC-11', label: 'UTC-11 (美属萨摩亚)' },
+        { value: 'UTC-10', label: 'UTC-10 (夏威夷)' },
+        { value: 'UTC-9', label: 'UTC-9 (阿拉斯加)' },
+        { value: 'UTC-8', label: 'UTC-8 (洛杉矶、温哥华)' },
+        { value: 'UTC-7', label: 'UTC-7 (丹佛、凤凰城)' },
+        { value: 'UTC-6', label: 'UTC-6 (芝加哥、墨西哥城)' },
+        { value: 'UTC-5', label: 'UTC-5 (纽约、多伦多)' },
+        { value: 'UTC-4', label: 'UTC-4 (圣地亚哥、加拉加斯)' },
+        { value: 'UTC-3', label: 'UTC-3 (布宜诺斯艾利斯、圣保罗)' },
+        { value: 'UTC-2', label: 'UTC-2 (南乔治亚岛)' },
+        { value: 'UTC-1', label: 'UTC-1 (亚速尔群岛)' },
+        { value: 'UTC+0', label: 'UTC+0 (伦敦、都柏林)' },
+        { value: 'UTC+1', label: 'UTC+1 (巴黎、柏林、罗马)' },
+        { value: 'UTC+2', label: 'UTC+2 (开罗、雅典、赫尔辛基)' },
+        { value: 'UTC+3', label: 'UTC+3 (莫斯科、伊斯坦布尔)' },
+        { value: 'UTC+4', label: 'UTC+4 (迪拜、巴库)' },
+        { value: 'UTC+5', label: 'UTC+5 (卡拉奇、塔什干)' },
+        { value: 'UTC+6', label: 'UTC+6 (达卡、阿拉木图)' },
+        { value: 'UTC+7', label: 'UTC+7 (曼谷、河内、雅加达)' },
+        { value: 'UTC+8', label: 'UTC+8 (北京、上海、新加坡)' },
+        { value: 'UTC+9', label: 'UTC+9 (东京、首尔)' },
+        { value: 'UTC+10', label: 'UTC+10 (悉尼、墨尔本)' },
+        { value: 'UTC+11', label: 'UTC+11 (所罗门群岛)' },
+        { value: 'UTC+12', label: 'UTC+12 (奥克兰、斐济)' },
       ],
+    }
+  },
+
+  computed: {
+    // 将时区值转换为带城市名称的显示格式
+    displayTimezoneLabel() {
+      const tz = this.timezones.find(t => t.value === this.currentDisplayTimezone)
+      return tz ? tz.label : this.currentDisplayTimezone
     }
   },
 
@@ -243,6 +253,7 @@ export default {
   },
   beforeUnmount() {
     if (this.timer) clearInterval(this.timer)
+    if (this.syncTimer) clearInterval(this.syncTimer)
   },
   methods: {
     handleNavigation() {},
@@ -252,30 +263,97 @@ export default {
       try {
         const res = await getTimeInfo()
         if (res.code === 200) {
+          // 保存服务器返回的原始时间
           this.serverTime = new Date(res.data.datetime)
+          // 保存时区信息用于显示
+          this.currentDisplayTimezone = res.data.timezone || 'UTC+8'
+          // 同时更新表单中的时区配置，使下拉框显示正确的值
+          const exists = this.timezones.some(t => t.value === this.currentDisplayTimezone)
+          if (exists) {
+            this.form.timezone = this.currentDisplayTimezone
+          }
+          // 记录更新时间戳
+          this.lastUpdateTime = Date.now()
         } else {
           this.serverTime = new Date()
+          this.currentDisplayTimezone = 'UTC+8'
+          this.lastUpdateTime = Date.now()
         }
       } catch {
         this.serverTime = new Date()
+        this.currentDisplayTimezone = 'UTC+8'
+        this.lastUpdateTime = Date.now()
       }
       this.updateClock()
+      // 每秒更新显示
       this.timer = setInterval(this.updateClock, 1000)
+      
+      // 每5分钟重新从后端同步一次时间，避免累积误差
+      this.syncTimer = setInterval(async () => {
+        console.log('重新同步服务器时间...')
+        await this.fetchTime()
+      }, 5 * 60 * 1000) // 5分钟
     },
 
     updateClock() {
-      if (this.serverTime) {
-        this.serverTime = new Date(this.serverTime.getTime() + 1000)
-      } else {
-        this.serverTime = new Date()
-      }
-      this.currentTime = this.serverTime.toLocaleTimeString('zh-CN', { hour12: false })
-      this.currentDate = this.serverTime.toLocaleDateString('zh-CN', {
+      // 计算从上次更新到现在经过的时间
+      const now = Date.now()
+      const elapsed = now - this.lastUpdateTime
+      
+      // 基于原始服务器时间加上经过的时间，得到当前服务器时间
+      const currentServerTime = new Date(this.serverTime.getTime() + elapsed)
+      
+      // 使用后端返回的时区来显示（而不是用户配置的时区）
+      const displayTimezone = this.currentDisplayTimezone || 'UTC+8'
+      
+      this.currentTime = this.formatTimeByTimezone(currentServerTime, displayTimezone)
+      this.currentDate = this.formatDateByTimezone(currentServerTime, displayTimezone)
+    },
+
+    // 根据指定时区格式化时间
+    formatTimeByTimezone(date, timezone) {
+      // 将时区字符串转换为偏移量（小时）
+      const offset = this.parseTimezoneOffset(timezone)
+      
+      // 计算目标时区的时间
+      const utc = date.getTime() + (date.getTimezoneOffset() * 60000)
+      const targetTime = new Date(utc + (offset * 3600000))
+      
+      return targetTime.toLocaleTimeString('zh-CN', { 
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    },
+
+    // 根据指定时区格式化日期
+    formatDateByTimezone(date, timezone) {
+      const offset = this.parseTimezoneOffset(timezone)
+      
+      // 计算目标时区的时间
+      const utc = date.getTime() + (date.getTimezoneOffset() * 60000)
+      const targetTime = new Date(utc + (offset * 3600000))
+      
+      return targetTime.toLocaleDateString('zh-CN', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
         weekday: 'long',
       })
+    },
+
+    // 解析时区字符串为偏移量（小时）
+    parseTimezoneOffset(timezone) {
+      // 例如：UTC+7 -> 7, UTC-5 -> -5, UTC+5:30 -> 5.5
+      const match = timezone.match(/UTC([+-])(\d+)(?::(\d+))?/)
+      if (!match) return 8 // 默认UTC+8
+      
+      const sign = match[1] === '+' ? 1 : -1
+      const hours = parseInt(match[2])
+      const minutes = match[3] ? parseInt(match[3]) : 0
+      
+      return sign * (hours + minutes / 60)
     },
 
     fillCurrentTime() {

@@ -22,7 +22,7 @@
             <div class="info-grid cols-4">
               <div class="info-item">
                 <div class="info-label">用户名</div>
-                <div class="info-value">admin</div>
+                <div class="info-value">{{ currentUser || 'admin' }}</div>
               </div>
               <div class="info-item">
                 <div class="info-label">角色</div>
@@ -30,7 +30,7 @@
               </div>
               <div class="info-item">
                 <div class="info-label">上次登录</div>
-                <div class="info-value">{{ lastLoginTime }}</div>
+                <div class="info-value">{{ lastLoginTime || '加载中...' }}</div>
               </div>
               <div class="info-item">
                 <div class="info-label">登录IP</div>
@@ -158,6 +158,7 @@
 <script>
 import MainLayout from '@/components/layout/MainLayout.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import { changePassword } from '@/api/network.js'
 
 export default {
   name: 'UserManagement',
@@ -169,7 +170,8 @@ export default {
       showOld: false,
       showNew: false,
       showConfirm: false,
-      lastLoginTime: '2025-01-15 09:23:45',
+      lastLoginTime: '',
+      currentUser: '',
       form: {
         oldPassword: '',
         newPassword: '',
@@ -177,6 +179,9 @@ export default {
       },
       strength: 0,
     }
+  },
+  created() {
+    this.loadUserInfo()
   },
   computed: {
     rules() {
@@ -217,23 +222,79 @@ export default {
   methods: {
     handleNavigation() {},
 
+    loadUserInfo() {
+      // TODO: 后续可以从用户信息接口获取
+      this.lastLoginTime = '2025-01-15 09:23:45'
+      this.currentUser = 'admin'
+    },
+
     checkStrength() {
       const r = this.rules
       this.strength = [r.length, r.lower, r.number].filter(Boolean).length
     },
 
-    handleSubmit() {
-      if (!this.canSubmit) return
+    async handleSubmit() {
+      if (!this.canSubmit) {
+        this.$message.warning('请完整填写密码信息并满足所有要求')
+        return
+      }
+
       this.saving = true
-      // TODO: 接入真实API后替换
-      setTimeout(() => {
+      
+      try {
+        // 构造符合后端API要求的请求数据
+        const requestData = {
+          username: this.currentUser || 'admin',
+          old_password: this.form.oldPassword,
+          new_password: this.form.newPassword,
+        }
+
+        console.log('📤 发送密码修改请求:', {
+          url: '/api/user/password',
+          method: 'POST',
+          data: requestData
+        })
+
+        const response = await changePassword(requestData)
+        
+        console.log('📥 收到响应:', response)
+        
+        if (response.code === 200) {
+          this.$message.success('密码修改成功，请使用新密码重新登录')
+          // 清空表单
+          this.form.oldPassword = ''
+          this.form.newPassword = ''
+          this.form.confirmPassword = ''
+          this.strength = 0
+          
+          // 可选：3秒后跳转到登录页
+          setTimeout(() => {
+            // this.$router.push('/login')
+          }, 3000)
+        } else {
+          this.$message.error(response.message || '密码修改失败')
+        }
+      } catch (error) {
+        console.error('❌ 密码修改失败:', error)
+        console.error('错误详情:', {
+          message: error.message,
+          response: error.response,
+          status: error.response?.status
+        })
+        
+        // 根据错误类型显示不同的提示
+        if (error.response?.status === 405) {
+          this.$message.error('请求方法不被允许，请联系管理员检查API配置')
+        } else if (error.response?.status === 401) {
+          this.$message.error('认证失败，请重新登录')
+        } else if (error.response?.status === 400) {
+          this.$message.error(error.response.data?.message || '请求参数错误')
+        } else {
+          this.$message.error(error.message || '密码修改失败，请检查网络连接')
+        }
+      } finally {
         this.saving = false
-        this.form.oldPassword = ''
-        this.form.newPassword = ''
-        this.form.confirmPassword = ''
-        this.strength = 0
-        alert('密码修改成功（Mock）')
-      }, 800)
+      }
     },
   },
 }

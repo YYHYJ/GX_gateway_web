@@ -8,7 +8,20 @@
     <div class="content-area">
       <PageHeader title="北向 Modbus" :breadcrumbs="breadcrumbs" />
 
-      <div class="modbus-content">
+      <!-- 待开发提示 -->
+      <div class="dev-notice-banner">
+        <div class="notice-icon">
+          <i class="fas fa-tools"></i>
+        </div>
+        <div class="notice-content">
+          <h3>功能开发中</h3>
+          <p>北向 Modbus 功能正在开发中，敬请期待...</p>
+          <p class="notice-hint">当前页面仅展示UI设计原型，后端接口尚未实现</p>
+        </div>
+      </div>
+
+      <!-- 原有内容（保留但置灰） -->
+      <div class="modbus-content placeholder-mode">
         <!-- 服务状态 + 配置 -->
         <div class="top-row">
           <!-- 服务配置 -->
@@ -704,14 +717,51 @@ export default {
     flex: none;
     width: 100%;
   }
+}
 
-  .service-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
+/* 待开发提示横幅 */
+.dev-notice-banner {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border: 2px solid #ffc107;
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
+}
 
-  .service-actions {
-    justify-content: flex-end;
-  }
+.notice-icon {
+  font-size: 32px;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.notice-content h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #92400e;
+  margin: 0 0 8px 0;
+}
+
+.notice-content p {
+  font-size: 14px;
+  color: #78350f;
+  margin: 4px 0;
+  line-height: 1.6;
+}
+
+.notice-hint {
+  font-size: 13px !important;
+  color: #a16207 !important;
+  font-style: italic;
+}
+
+/* 占位模式 - 将原有内容置灰 */
+.placeholder-mode {
+  opacity: 0.5;
+  pointer-events: none;
+  filter: grayscale(50%);
 }
 </style>

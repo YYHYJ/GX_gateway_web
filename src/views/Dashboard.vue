@@ -29,7 +29,7 @@
             <div class="info-value">{{ systemInfo.uptime }}</div>
           </div>
           <div class="info-item">
-            <div class="info-label">本地时间</div>
+            <div class="info-label">系统时间</div>
             <div class="info-value">{{ local_time }}</div>
           </div>
         </div>
@@ -124,8 +124,6 @@
           </div>
         </div>
       </div>
-
-
     </div>
   </MainLayout>
 </template>
@@ -148,7 +146,10 @@ export default {
       },
       local_time: '',
       serverTime: null,
+      currentDisplayTimezone: 'UTC+8', // 当前显示的时区
       timer: null,
+      syncTimer: null, // 定期同步定时器
+      lastUpdateTime: null, // 上次更新的时间戳
       loading: false,
 
       // 轮询控制
@@ -240,6 +241,9 @@ export default {
     if (this.timer) {
       clearInterval(this.timer)
     }
+    if (this.syncTimer) {
+      clearInterval(this.syncTimer)
+    }
     if (this.hardwarePollingInterval) {
       clearInterval(this.hardwarePollingInterval)
     }
@@ -255,24 +259,60 @@ export default {
       try {
         const res = await getTimeInfo()
         if (res.code === 200) {
+          // 保存服务器返回的原始时间
           this.serverTime = new Date(res.data.datetime)
+          // 保存时区信息用于显示
+          this.currentDisplayTimezone = res.data.timezone || 'UTC+8'
+          // 记录更新时间戳
+          this.lastUpdateTime = Date.now()
         } else {
           this.serverTime = new Date()
+          this.currentDisplayTimezone = 'UTC+8'
+          this.lastUpdateTime = Date.now()
         }
       } catch {
         this.serverTime = new Date()
+        this.currentDisplayTimezone = 'UTC+8'
+        this.lastUpdateTime = Date.now()
       }
       this.updateTime()
+      // 每秒更新显示
       this.timer = setInterval(this.updateTime, 1000)
+
+      // 每5分钟重新从后端同步一次时间，避免累积误差
+      this.syncTimer = setInterval(
+        async () => {
+          console.log('[Dashboard] 重新同步服务器时间...')
+          await this.fetchTime()
+        },
+        5 * 60 * 1000,
+      ) // 5分钟
     },
 
     updateTime() {
-      if (this.serverTime) {
-        this.serverTime = new Date(this.serverTime.getTime() + 1000)
-      } else {
-        this.serverTime = new Date()
-      }
-      this.local_time = this.serverTime.toLocaleString('zh-CN', {
+      // 计算从上次更新到现在经过的时间
+      const now = Date.now()
+      const elapsed = now - this.lastUpdateTime
+
+      // 基于原始服务器时间加上经过的时间，得到当前服务器时间
+      const currentServerTime = new Date(this.serverTime.getTime() + elapsed)
+
+      // 使用后端返回的时区来显示
+      const displayTimezone = this.currentDisplayTimezone || 'UTC+8'
+
+      this.local_time = this.formatTimeByTimezone(currentServerTime, displayTimezone)
+    },
+
+    // 根据指定时区格式化时间
+    formatTimeByTimezone(date, timezone) {
+      // 将时区字符串转换为偏移量（小时）
+      const offset = this.parseTimezoneOffset(timezone)
+
+      // 计算目标时区的时间
+      const utc = date.getTime() + date.getTimezoneOffset() * 60000
+      const targetTime = new Date(utc + offset * 3600000)
+
+      return targetTime.toLocaleString('zh-CN', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -281,6 +321,19 @@ export default {
         second: '2-digit',
         hour12: false,
       })
+    },
+
+    // 解析时区字符串为偏移量（小时）
+    parseTimezoneOffset(timezone) {
+      // 例如：UTC+7 -> 7, UTC-5 -> -5, UTC+5:30 -> 5.5
+      const match = timezone.match(/UTC([+-])(\d+)(?::(\d+))?/)
+      if (!match) return 8 // 默认UTC+8
+
+      const sign = match[1] === '+' ? 1 : -1
+      const hours = parseInt(match[2])
+      const minutes = match[3] ? parseInt(match[3]) : 0
+
+      return sign * (hours + minutes / 60)
     },
 
     // 启动硬件状态轮询
@@ -326,13 +379,17 @@ export default {
 
     // 更新最后更新时间
     updateLastUpdateTime() {
-      const now = new Date()
-      this.lastHardwareUpdate = now.toLocaleString('zh-CN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-      })
+      // 使用服务器时间而不是本地时间
+      const now = Date.now()
+      const elapsed = now - this.lastUpdateTime
+
+      // 基于原始服务器时间加上经过的时间，得到当前服务器时间
+      const currentServerTime = new Date(this.serverTime.getTime() + elapsed)
+
+      // 使用后端返回的时区来显示
+      const displayTimezone = this.currentDisplayTimezone || 'UTC+8'
+
+      this.lastHardwareUpdate = this.formatTimeByTimezone(currentServerTime, displayTimezone)
     },
 
     // 获取系统信息API
@@ -398,9 +455,12 @@ export default {
       const storageUsage = parseFloat(data.storage_usage || 0).toFixed(2)
       const rawLoad = data.load_average
       const loadAverage = Array.isArray(rawLoad)
-        ? rawLoad.map(v => parseFloat(v) || 0)
+        ? rawLoad.map((v) => parseFloat(v) || 0)
         : typeof rawLoad === 'string'
-          ? rawLoad.split(/[,\s]+/).filter(Boolean).map(v => parseFloat(v) || 0)
+          ? rawLoad
+              .split(/[,\s]+/)
+              .filter(Boolean)
+              .map((v) => parseFloat(v) || 0)
           : [0, 0, 0]
 
       // 确定硬件状态（使用数值进行比较）
@@ -421,7 +481,7 @@ export default {
         cpuUsageValue: cpuUsageValue,
         memoryUsage: `${memoryUsage}%`,
         memoryUsageValue: memoryUsageValue,
-        storageUsage: `${storageUsage}%`,  // 只显示百分比
+        storageUsage: `${storageUsage}%`, // 只显示百分比
         storageUsageValue: storageUsageValue,
         storageDevice: data.storage_device || '未知',
         totalStorage: data.total_storage || '未知',
@@ -682,8 +742,6 @@ export default {
   stroke-width: 2;
   fill: none;
 }
-
-
 
 /* 响应式设计 */
 @media (max-width: 1024px) {
