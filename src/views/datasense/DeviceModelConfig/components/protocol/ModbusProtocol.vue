@@ -759,7 +759,7 @@
                     v-model.number="pointGroupForm.memberCount"
                     class="form-control"
                     min="1"
-                    max="100"
+                    max="500"
                     required
                     placeholder="例如: 5"
                     @change="updateAddressInterval"
@@ -1220,17 +1220,17 @@ export default {
         }))
       }
 
-      // 按地址升序排列
-      const sortedPoints = [...this.allPoints].sort((a, b) => a.address - b.address)
+      // 先按功能码分组，再按地址排序
+      const sortedPoints = [...this.allPoints].sort(this.modbusPointSort)
 
       const groups = []
       let currentGroup = null
 
-      // 批量上限（与后端一致）
+      // 批量上限（仅对boolean/bit类型生效，普通寄存器单组不再限制上限）
       const limits = {
         boolean: 100, // 线圈最多 100 个
         bit: 100, // bit 类型最多 100 个
-        normal: 60, // 普通寄存器最多 60 个
+        normal: Infinity, // 普通寄存器不限制单组上限
       }
 
       sortedPoints.forEach((point) => {
@@ -1253,7 +1253,7 @@ export default {
           let withinLimit = false
 
           if (isBoolean) {
-            // boolean 类型：地址连续即可
+            // boolean 类型：地址连续（批量读取连续的线圈）
             isContinuous = point.address === currentGroup.startAddress + currentGroup.quantity
             withinLimit = currentGroup.quantity < limits.boolean
           } else if (isBit) {
@@ -1279,8 +1279,8 @@ export default {
 
           let initialQuantity
           if (isBoolean) {
-            // boolean 类型（功能码 01/02）：quantity 表示线圈数量
-            initialQuantity = pointLength // 通常是 1
+            // boolean 类型（功能码 01/02）：每个线圈占用1个地址位置
+            initialQuantity = 1
           } else if (isBit) {
             // bit 类型（功能码 03/04）：即使只有一个 bit，也占用整个寄存器
             initialQuantity = 1
@@ -1351,7 +1351,7 @@ export default {
           })
           // 添加折叠的行（仅在展开状态时显示）
           if (this.isGroupExpanded(group.groupId)) {
-            group.points.slice(1).forEach((p) => {
+            group.points.forEach((p) => {
               result.push({
                 ...p,
                 _groupId: group.groupId,
@@ -1370,7 +1370,7 @@ export default {
     // 数据类型与地址间隔的映射关系
     dataTypeIntervalMap() {
       return {
-        // BOOL类型：地址间隔为1（假设BOOL占用1个寄存器）
+        // BOOL类型：地址间隔为1（每个线圈占用1个地址）
         boolean: 1,
 
         // BIT类型：地址间隔为0（同一个寄存器内）
@@ -1547,6 +1547,14 @@ export default {
   methods: {
     formatDataType,
 
+    modbusPointSort(a, b) {
+      const fnA = Number(a.functionCode) || 0
+      const fnB = Number(b.functionCode) || 0
+      if (fnA !== fnB) return fnA - fnB
+      if (a.address !== b.address) return a.address - b.address
+      return String(a.pointCode || '').localeCompare(String(b.pointCode || ''))
+    },
+
     // 切换分组展开/折叠状态
     toggleGroup(groupId) {
       this.collapsedGroups = {
@@ -1664,6 +1672,7 @@ export default {
         filtered = filtered.filter((point) => point.isVirtual === isVirtualValue)
       }
 
+      filtered.sort(this.modbusPointSort)
       this.filteredPoints = filtered
       this.updatePagination()
 
@@ -2013,8 +2022,8 @@ export default {
         errors.push('基础点位名称不能为空')
       }
 
-      if (this.pointGroupForm.memberCount < 1 || this.pointGroupForm.memberCount > 100) {
-        errors.push('组员数量必须在1-100之间')
+      if (this.pointGroupForm.memberCount < 1 || this.pointGroupForm.memberCount > 500) {
+        errors.push('组员数量必须在1-500之间')
       }
 
       if (this.pointGroupForm.startAddress < 1 || this.pointGroupForm.startAddress > 65535) {
@@ -2224,6 +2233,17 @@ export default {
       this.inlineEditValue = ''
     },
 
+    updatePointLocalState(pointId, field, value) {
+      const updateField = (list) => {
+        if (!Array.isArray(list)) return
+        const item = list.find((item) => item.id === pointId)
+        if (item) item[field] = value
+      }
+      updateField(this.allPoints)
+      updateField(this.filteredPoints)
+      updateField(this.points)
+    },
+
     buildPointPayload(point) {
       return {
         id: point.id,
@@ -2264,6 +2284,7 @@ export default {
       if (newVal === oldVal || (typeof newVal === 'string' && newVal === '' && !oldVal)) return
 
       point[field] = newVal
+      this.updatePointLocalState(point.id, field, newVal)
       try {
         const response = await axios.put('/api/device/model_detail_modbus', {
           points: [this.buildPointPayload(point)],
@@ -2272,10 +2293,12 @@ export default {
           this.$message.success('已更新')
         } else {
           point[field] = oldVal
+          this.updatePointLocalState(point.id, field, oldVal)
           this.$message.error(response.data?.message || '更新失败')
         }
       } catch (err) {
         point[field] = oldVal
+        this.updatePointLocalState(point.id, field, oldVal)
         this.$message.error('更新失败: ' + (err.response?.data?.message || err.message))
       }
     },
@@ -2283,6 +2306,7 @@ export default {
     async toggleField(point, field) {
       const oldVal = point[field]
       point[field] = oldVal === 1 ? 0 : 1
+      this.updatePointLocalState(point.id, field, point[field])
       try {
         const response = await axios.put('/api/device/model_detail_modbus', {
           points: [this.buildPointPayload(point)],
@@ -2291,10 +2315,12 @@ export default {
           this.$message.success('已更新')
         } else {
           point[field] = oldVal
+          this.updatePointLocalState(point.id, field, oldVal)
           this.$message.error(response.data?.message || '更新失败')
         }
       } catch (err) {
         point[field] = oldVal
+        this.updatePointLocalState(point.id, field, oldVal)
         this.$message.error('更新失败: ' + (err.response?.data?.message || err.message))
       }
     },
@@ -2304,6 +2330,7 @@ export default {
       const newVal = Math.max(0, oldVal + delta)
       if (newVal === oldVal) return
       point.precision = newVal
+      this.updatePointLocalState(point.id, 'precision', newVal)
       try {
         const response = await axios.put('/api/device/model_detail_modbus', {
           points: [this.buildPointPayload(point)],
@@ -2312,10 +2339,12 @@ export default {
           this.$message.success('已更新')
         } else {
           point.precision = oldVal
+          this.updatePointLocalState(point.id, 'precision', oldVal)
           this.$message.error(response.data?.message || '更新失败')
         }
       } catch (err) {
         point.precision = oldVal
+        this.updatePointLocalState(point.id, 'precision', oldVal)
         this.$message.error('更新失败: ' + (err.response?.data?.message || err.message))
       }
     },

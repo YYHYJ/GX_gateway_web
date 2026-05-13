@@ -30,7 +30,7 @@ class WebSocketService {
     this.lastHeartbeatTime = null
 
     this.config = {
-      url: import.meta.env.VITE_WS_URL || `ws://${window.location.host}/ws`,
+      url: import.meta.env.VITE_WS_URL || (window.location.protocol === 'https:' ? `wss://${window.location.host}/ws` : `ws://${window.location.host}/ws`),
       autoConnect: true,
       autoReconnect: true,
       maxQueueSize: 100,
