@@ -42,36 +42,68 @@ export function updateDefaultRoute(data) {
   return request({ url: '/api/network/routes/default', method: 'put', data })
 }
 
-// ========== VPN ==========
+// ========== VPN (WireGuard) ==========
 
-// 获取 VPN 配置
+// 获取 WireGuard VPN 配置
 export function getVpnConfig() {
-  return request({ url: '/api/vpn/config', method: 'get' })
+  return request({ url: 'api/vpn/wireguard/config', method: 'get' })
 }
 
-// 更新 VPN 配置
+// 更新 WireGuard VPN 配置
 export function updateVpnConfig(data) {
-  return request({ url: '/api/vpn/config', method: 'post', data })
+  return request({ url: 'api/vpn/wireguard/config', method: 'post', data })
 }
 
-// 获取 VPN 连接状态
+// 获取 WireGuard VPN 连接状态
 export function getVpnStatus() {
-  return request({ url: '/api/vpn/status', method: 'get' })
+  return request({ url: 'api/vpn/wireguard/status', method: 'get' })
 }
 
-// 启动 VPN
+// 启动 WireGuard VPN
 export function startVpn() {
-  return request({ url: '/api/vpn/start', method: 'post' })
+  return request({ url: 'api/vpn/wireguard/start', method: 'post' })
 }
 
-// 停止 VPN
+// 停止 WireGuard VPN
 export function stopVpn() {
-  return request({ url: '/api/vpn/stop', method: 'post' })
+  return request({ url: 'api/vpn/wireguard/stop', method: 'post' })
 }
 
-// 重启 VPN
+// 重启 WireGuard VPN
 export function restartVpn() {
-  return request({ url: '/api/vpn/restart', method: 'post' })
+  return request({ url: 'api/vpn/wireguard/restart', method: 'post' })
+}
+
+// ========== OpenVPN ==========
+
+// 获取 OpenVPN 配置
+export function getOpenVpnConfig() {
+  return request({ url: '/api/vpn/openvpn/config', method: 'get' })
+}
+
+// 更新 OpenVPN 配置
+export function updateOpenVpnConfig(data) {
+  return request({ url: '/api/vpn/openvpn/config', method: 'post', data })
+}
+
+// 获取 OpenVPN 连接状态
+export function getOpenVpnStatus() {
+  return request({ url: '/api/vpn/openvpn/status', method: 'get' })
+}
+
+// 启动 OpenVPN
+export function startOpenVpn() {
+  return request({ url: '/api/vpn/openvpn/start', method: 'post' })
+}
+
+// 停止 OpenVPN
+export function stopOpenVpn() {
+  return request({ url: '/api/vpn/openvpn/stop', method: 'post' })
+}
+
+// 重启 OpenVPN
+export function restartOpenVpn() {
+  return request({ url: '/api/vpn/openvpn/restart', method: 'post' })
 }
 
 // ========== 用户管理 ==========
@@ -80,14 +112,14 @@ export function restartVpn() {
 export function changePassword(data) {
   // 尝试1: POST /api/user/password (不带斜杠)
   return request({ url: '/api/user/password', method: 'post', data })
-  
+
   // 如果上面不行，尝试下面这些：
   // 尝试2: PUT /api/user/password (按文档)
   // return request({ url: '/api/user/password', method: 'put', data })
-  
+
   // 尝试3: POST /api/user/change-password
   // return request({ url: '/api/user/change-password', method: 'post', data })
-  
+
   // 尝试4: POST /api/auth/password
   // return request({ url: '/api/auth/password', method: 'post', data })
 }

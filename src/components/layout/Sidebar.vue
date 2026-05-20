@@ -322,7 +322,8 @@ export default {
     handleSubNavClick(childItem, parentItem, event) {
       if (event) {
         event.stopPropagation()
-        event.preventDefault()
+        // 移除 preventDefault，让 router-link 正常跳转
+        // event.preventDefault()
       }
 
       // 确保父菜单展开
