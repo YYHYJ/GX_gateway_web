@@ -93,17 +93,29 @@ export function getOpenVpnStatus() {
 
 // 启动 OpenVPN
 export function startOpenVpn() {
-  return request({ url: '/api/vpn/openvpn/start', method: 'post' })
+  return request({ 
+    url: '/api/vpn/openvpn/start', 
+    method: 'post',
+    timeout: 90000 // 90秒超时，根据API变化说明
+  })
 }
 
 // 停止 OpenVPN
 export function stopOpenVpn() {
-  return request({ url: '/api/vpn/openvpn/stop', method: 'post' })
+  return request({ 
+    url: '/api/vpn/openvpn/stop', 
+    method: 'post',
+    timeout: 30000 // 30秒超时
+  })
 }
 
 // 重启 OpenVPN
 export function restartOpenVpn() {
-  return request({ url: '/api/vpn/openvpn/restart', method: 'post' })
+  return request({ 
+    url: '/api/vpn/openvpn/restart', 
+    method: 'post',
+    timeout: 90000 // 90秒超时，根据API变化说明
+  })
 }
 
 // ========== 用户管理 ==========
