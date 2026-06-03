@@ -22,8 +22,15 @@
                     class="device-select"
                   >
                     <option value="">请选择设备...</option>
-                    <option v-for="device in devices" :key="device.id" :value="device.id">
+                    <option 
+                      v-for="device in devices" 
+                      :key="device.id" 
+                      :value="device.id"
+                      :class="{ 'device-connected': isDeviceConnectedFunc(device.id) }"
+                    >
                       {{ device.device_name || '未知设备' }} ({{ device.device_code || device.id }})
+                      <span v-if="isDeviceConnectedFunc(device.id)" class="connected-indicator">✓ 已连接</span>
+                      <span v-else class="disconnected-indicator">✗ 未连接</span>
                     </option>
                   </select>
                   <i class="fas fa-chevron-down select-arrow"></i>
@@ -54,16 +61,12 @@
             <div class="select-right">
               <div class="connection-status" :class="{ connected: isWebSocketConnected }">
                 <i class="fas fa-circle"></i>
-                {{ isWebSocketConnected ? '已连接' : '已断开' }}
+                {{ isWebSocketConnected ? 'WebSocket已连接' : 'WebSocket已断开' }}
               </div>
-              <button
-                class="btn btn-outline"
-                @click="reconnectWebSocket"
-                :disabled="isWebSocketConnected || !selectedDevice || loadingData"
-              >
-                <i class="fas fa-plug"></i>
-                {{ isWebSocketConnected ? '已连接' : '重新连接' }}
-              </button>
+              <div class="connection-status device-status" :class="{ connected: isDeviceConnected }" v-if="selectedDevice">
+                <i class="fas fa-circle"></i>
+                {{ isDeviceConnected ? '设备已连接' : '设备未连接' }}
+              </div>
             </div>
           </div>
         </div>
@@ -310,6 +313,7 @@ export default {
 
       // 设备选择相关
       devices: [],
+      deviceStatusMap: new Map(), // 存储设备连接状态
       selectedDeviceId: '',
       selectedDevice: null,
       loading: false,
@@ -318,6 +322,10 @@ export default {
       isWebSocketConnected: false,
       wsUnsubscribe: null,
       currentSubscription: null,
+
+      // 设备连接状态相关
+      isDeviceConnected: false, // 当前选择设备是否实际连接
+      deviceConnectionTimer: null, // 设备连接状态检查定时器
 
       // 数据相关
       realtimeData: [],
@@ -369,6 +377,7 @@ export default {
   beforeUnmount() {
     this.cleanupAll()
     this.stopAutoRefreshDebug()
+    this.stopDeviceStatusPolling()
   },
 
   computed: {
@@ -404,9 +413,16 @@ export default {
     async loadDeviceList() {
       this.loading = true
       try {
+        // 1. 获取所有设备
         const response = await deviceService.getDeviceInstances()
         if (response.code === 200 && response.data?.devices) {
           this.devices = response.data.devices
+          
+          // 2. 获取设备连接状态
+          await this.fetchDeviceConnectionStatus()
+          
+          // 3. 启动设备状态轮询
+          this.startDeviceStatusPolling()
         } else {
           this.$message.error('加载设备列表失败')
           this.devices = []
@@ -420,6 +436,56 @@ export default {
       }
     },
 
+    // 获取设备连接状态
+    async fetchDeviceConnectionStatus() {
+      try {
+        const statusResponse = await deviceService.getDeviceStatus()
+        if (statusResponse.code === 200 && Array.isArray(statusResponse.data)) {
+          // 清空状态映射
+          this.deviceStatusMap.clear()
+          
+          // 更新设备连接状态
+          statusResponse.data.forEach(status => {
+            this.deviceStatusMap.set(status.device_id, status.conn_status === 'connected')
+          })
+          
+          // 更新当前选择设备的连接状态
+          if (this.selectedDevice) {
+            this.isDeviceConnected = this.deviceStatusMap.get(this.selectedDevice.id) || false
+          }
+        }
+      } catch (error) {
+        console.error('获取设备连接状态失败:', error)
+      }
+    },
+
+    // 启动设备状态轮询
+    startDeviceStatusPolling() {
+      this.stopDeviceStatusPolling()
+      
+      this.deviceStatusTimer = setInterval(() => {
+        if (this.devices.length > 0) {
+          this.fetchDeviceConnectionStatus()
+        }
+      }, 5000) // 每5秒更新一次设备连接状态
+    },
+
+    // 停止设备状态轮询
+    stopDeviceStatusPolling() {
+      if (this.deviceStatusTimer) {
+        clearInterval(this.deviceStatusTimer)
+        this.deviceStatusTimer = null
+      }
+    },
+
+    // 停止设备连接检查
+    stopDeviceConnectionCheck() {
+      if (this.deviceConnectionTimer) {
+        clearInterval(this.deviceConnectionTimer)
+        this.deviceConnectionTimer = null
+      }
+    },
+
     // 设备选择变化处理
     handleDeviceChange() {
       if (!this.selectedDeviceId) {
@@ -429,6 +495,7 @@ export default {
         this.writeValues = {}
         this.isDebugMode = false
         this.settingDebugFlag = false
+        this.isDeviceConnected = false
         return
       }
 
@@ -448,6 +515,9 @@ export default {
           id: this.selectedDevice.id,
           code: this.selectedDevice.device_code,
         }
+
+        // 更新当前设备的连接状态
+        this.isDeviceConnected = this.deviceStatusMap.get(device.id) || false
 
         this.realtimeData = []
         this.writeValues = {}
@@ -486,6 +556,7 @@ export default {
       this.currentSubscription = null
       this.cleanupWebSocketSubscription()
       this.isWebSocketConnected = false
+      this.isDeviceConnected = false
     },
 
     // 初始化WebSocket
@@ -569,6 +640,7 @@ export default {
     handleWebSocketDisconnected() {
       console.log('[组件] WebSocket连接断开')
       this.isWebSocketConnected = false
+      this.isDeviceConnected = false
       this.$message.warning('WebSocket连接已断开')
 
       this.cleanupWebSocketSubscription()
@@ -623,6 +695,10 @@ export default {
         console.log('[组件] 数据匹配成功，更新界面')
         this.lastUpdateTime = Date.now()
         this.loadingData = false
+        
+        // 收到设备数据，标记设备为已连接
+        this.isDeviceConnected = true
+        this.deviceStatusMap.set(this.selectedDevice.id, true)
 
         if (data.points && data.points.length > 0) {
           console.log('[组件] 有数据点，数量:', data.points.length)
@@ -673,30 +749,17 @@ export default {
       wsService.off(WSEvent.MESSAGE, this.handleAllMessages)
     },
 
-    // 重新连接WebSocket
-    reconnectWebSocket() {
-      if (!this.selectedDevice) return
 
-      this.loadingData = true
-      this.cleanupWebSocketSubscription()
-
-      if (wsService.isConnected) {
-        if (this.currentSubscription) {
-          this.unsubscribeCurrentDevice()
-        }
-        wsService.disconnect()
-      }
-
-      setTimeout(() => {
-        this.initWebSocket()
-        wsService.connect()
-      }, 1000)
-    },
 
     // 刷新设备列表
     refreshDeviceList() {
       this.loadDeviceList()
       this.$message.info('正在刷新设备列表...')
+    },
+
+    // 检查设备是否已连接
+    isDeviceConnectedFunc(deviceId) {
+      return this.deviceStatusMap.get(deviceId) || false
     },
 
     // 刷新数据
@@ -1123,6 +1186,7 @@ export default {
       this.unsubscribeCurrentDevice()
       this.cleanupWebSocketSubscription()
       this.stopAutoRefreshDebug()
+      this.stopDeviceStatusPolling()
 
       if (wsService.isConnected) {
         wsService.disconnect()
@@ -1278,8 +1342,39 @@ export default {
   border-color: rgba(40, 167, 69, 0.2);
 }
 
+.connection-status.device-status {
+  background: rgba(52, 152, 219, 0.1);
+  border-color: rgba(52, 152, 219, 0.2);
+}
+
+.connection-status.device-status.connected {
+  color: #3498db;
+  background: rgba(52, 152, 219, 0.1);
+  border-color: rgba(52, 152, 219, 0.2);
+}
+
 .connection-status i {
   font-size: 8px;
+}
+
+/* 设备下拉框连接状态样式 */
+.device-select option.device-connected {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.connected-indicator {
+  color: #28a745;
+  font-size: 12px;
+  margin-left: 8px;
+  font-weight: bold;
+}
+
+.disconnected-indicator {
+  color: #e74c3c;
+  font-size: 12px;
+  margin-left: 8px;
+  font-weight: bold;
 }
 
 .btn-outline {
