@@ -77,6 +77,25 @@ class MqttService {
   }
 
   /**
+   * 获取所有broker连接的运行状态（单独接口）
+   * API: GET /api/mqtt/broker/status
+   * 返回示例: { code:200, data: [{ broker_id: 1, connected: true, broker_index: 0 }, ...] }
+   */
+  async getBrokerStatuses() {
+    try {
+      const response = await this.axios.get(`${this.baseUrl}/broker/status`)
+      if (response && response.code === 200 && Array.isArray(response.data)) {
+        return response.data
+      }
+      console.warn('获取broker状态: 返回格式不符合预期', response)
+      return []
+    } catch (error) {
+      console.error('获取broker状态失败:', error)
+      return []
+    }
+  }
+
+  /**
    * 获取完整连接配置（brokers + topics）
    * 这是最常用的方法，在组件加载时调用
    * @returns {Promise<Array>} 前端格式的connections
@@ -91,8 +110,32 @@ class MqttService {
       console.log('获取brokers成功，数量:', brokers.length)
       console.log('获取topics成功，数量:', topics.length)
 
+      // 获取broker运行状态并尝试合并（如果后端提供了单独状态接口）
+      let statuses = []
+      try {
+        statuses = await this.getBrokerStatuses()
+      } catch (e) {
+        console.warn('获取broker状态失败，将使用配置中的状态:', e)
+      }
+
+      const mergedBrokers = (Array.isArray(brokers) ? brokers : []).map((broker) => {
+        const match = (statuses || []).find((s) => {
+          if (!s) return false
+          // 尝试通过多种字段匹配：broker_id, id, broker_index
+          if (s.broker_id !== undefined && (s.broker_id === broker.id || s.broker_id === broker.broker_id || s.broker_id === broker.broker_index)) return true
+          if (s.broker_index !== undefined && broker.broker_index !== undefined && s.broker_index === broker.broker_index) return true
+          return false
+        })
+
+        if (match) {
+          const connected = ('connected' in match) ? Boolean(match.connected) : match.conn_status === 'connected'
+          return { ...broker, connected }
+        }
+        return broker
+      })
+
       // 转换为前端格式
-      const connections = mqttDataFormatter.formatDbToFrontend(brokers, topics)
+      const connections = mqttDataFormatter.formatDbToFrontend(mergedBrokers, topics)
       console.log('转换后的connections:', connections)
 
       return connections

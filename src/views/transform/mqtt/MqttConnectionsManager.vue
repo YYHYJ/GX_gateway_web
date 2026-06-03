@@ -105,7 +105,9 @@
                       title="绑定上报方案"
                     >
                       <option value="">未绑定方案</option>
-                      <option v-for="s in schemes" :key="s.id" :value="String(s.id)">{{ s.scheme_name }}</option>
+                      <option v-for="s in schemes" :key="s.id" :value="String(s.id)">
+                        {{ s.scheme_name }}
+                      </option>
                     </select>
                     <span class="topic-qos">QoS {{ topic.qos }}</span>
                     <button
@@ -236,17 +238,44 @@ export default {
     async pollStatus() {
       try {
         if (!this.mqttService) return
-        // 只拉 broker 状态，不重复拉 topic
-        const brokers = await this.mqttService.getBrokers()
+        // 使用单独的状态接口拉取broker运行状态
+        const statuses = await this.mqttService.getBrokerStatuses()
         // 更新现有 connections 的状态字段
         const updated = this.connections.map((conn) => {
-          const broker = brokers.find((b) => b.id === conn.id)
-          if (broker) {
-            const status = !broker.enabled ? '已禁用' : broker.connected ? '已连接' : '未连接'
-            return { ...conn, status, enabled: Boolean(broker.enabled) }
-          }
-          return conn
+          const match = (statuses || []).find((s) => {
+            if (!s) return false
+            if (
+              s.broker_id !== undefined &&
+              (s.broker_id === conn.id ||
+                s.broker_id === conn.broker_id ||
+                s.broker_id === conn.broker_index)
+            )
+              return true
+            if (
+              s.broker_index !== undefined &&
+              conn.broker_index !== undefined &&
+              s.broker_index === conn.broker_index
+            )
+              return true
+            return false
+          })
+
+          const enabled = match && 'enabled' in match ? Boolean(match.enabled) : conn.enabled
+          const status = !enabled
+            ? '已禁用'
+            : match
+              ? 'connected' in match
+                ? match.connected
+                  ? '已连接'
+                  : '未连接'
+                : match.conn_status === 'connected'
+                  ? '已连接'
+                  : '未连接'
+              : conn.status
+
+          return { ...conn, status, enabled: Boolean(enabled) }
         })
+
         this.$emit('connections-loaded', updated)
       } catch (e) {
         // 静默失败，不影响界面
@@ -1066,7 +1095,6 @@ export default {
   color: #6c757d;
   font-size: 15px;
 }
-
 
 /* 方案绑定下拉框 */
 .topic-scheme-select {

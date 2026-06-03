@@ -303,7 +303,43 @@ export default {
 
         // 1. 获取所有brokers
         const brokers = await mqttService.getBrokers()
-        const broker = brokers.find((b) => b.id === connectionId)
+        // 同步获取单独的状态接口，以便展示实时连接状态
+        let statuses = []
+        try {
+          statuses = await mqttService.getBrokerStatuses()
+        } catch (e) {
+          // 忽略状态拉取错误，继续使用配置数据
+        }
+
+        let broker = brokers.find((b) => b.id === connectionId)
+
+        if (broker) {
+          const match = (statuses || []).find((s) => {
+            if (!s) return false
+            if (
+              s.broker_id !== undefined &&
+              (s.broker_id === broker.id ||
+                s.broker_id === broker.broker_id ||
+                s.broker_id === broker.broker_index)
+            )
+              return true
+            if (
+              s.broker_index !== undefined &&
+              broker.broker_index !== undefined &&
+              s.broker_index === broker.broker_index
+            )
+              return true
+            return false
+          })
+          if (match) {
+            broker = {
+              ...broker,
+              connected:
+                'connected' in match ? Boolean(match.connected) : match.conn_status === 'connected',
+              enabled: 'enabled' in match ? Boolean(match.enabled) : broker.enabled,
+            }
+          }
+        }
 
         if (!broker) {
           this.showError('未找到该连接')
