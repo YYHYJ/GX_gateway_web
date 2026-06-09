@@ -16,13 +16,13 @@ export const DB_FIELDS = {
     BROKER_INDEX: 'broker_index',
     BROKER_NAME: 'broker_name',
     ENABLED: 'enabled',
-    BROKER_HOST: 'broker_host',
-    BROKER_PORT: 'broker_port',
+    BROKER_HOST: 'host',
+    BROKER_PORT: 'port',
     CLIENT_ID: 'client_id',
     USERNAME: 'username',
     PASSWORD: 'password',
-    QOS_LEVEL: 'qos_level',
-    KEEPALIVE_INTERVAL: 'keepalive_interval',
+    QOS_LEVEL: 'qos',
+    KEEPALIVE_INTERVAL: 'keepalive',
     CLEAN_SESSION: 'clean_session',
     AUTO_RECONNECT: 'auto_reconnect',
     RECONNECT_INTERVAL: 'reconnect_interval',
@@ -84,7 +84,7 @@ export function formatDbToFrontend(brokersData = [], topicsData = []) {
         id: topic[DB_FIELDS.TOPICS.ID],
         type: 'publish',
         topic: topic[DB_FIELDS.TOPICS.TOPIC_NAME],
-        qos: topic[DB_FIELDS.TOPICS.QOS] || 1,
+        qos: topic[DB_FIELDS.TOPICS.QOS] ?? 1,
         retain: false,
         enabled: Boolean(topic[DB_FIELDS.TOPICS.ENABLED]),
         description: topic[DB_FIELDS.TOPICS.DESCRIPTION] || '',
@@ -97,7 +97,7 @@ export function formatDbToFrontend(brokersData = [], topicsData = []) {
         id: topic[DB_FIELDS.TOPICS.ID],
         type: 'subscribe',
         topic: topic[DB_FIELDS.TOPICS.TOPIC_NAME],
-        qos: topic[DB_FIELDS.TOPICS.QOS] || 1,
+        qos: topic[DB_FIELDS.TOPICS.QOS] ?? 1,
         enabled: Boolean(topic[DB_FIELDS.TOPICS.ENABLED]),
         description: topic[DB_FIELDS.TOPICS.DESCRIPTION] || '',
       }))
@@ -178,21 +178,21 @@ export function formatFrontendToDb(connection) {
   const dbData = {
     // 后端API要求的必填字段
     broker_name: connection.brokerName || basic.brokerName || '',
-    broker_host: basic.brokerHost || basic.host || 'localhost',
-    broker_port: basic.brokerPort || basic.port || 1883,
+    host: basic.brokerHost || basic.host || 'localhost',
+    port: basic.brokerPort || basic.port || 1883,
     client_id: basic.clientId || `gateway_${Date.now()}`,
 
     // 后端API验证的字段 - 必须有值
-    enabled: connection.enabled ? 1 : 0,
+    enabled: Boolean(connection.enabled),
 
     // 认证信息
     username: auth.authType === 'password' ? auth.username : '',
     password: auth.authType === 'password' ? auth.password : '',
 
     // QoS和会话设置 - 使用后端期望的字段名
-    qos_level: basic.qosLevel || parseInt(advanced.defaultPublishQos) || 1,
-    keepalive_interval: basic.keepaliveInterval || basic.keepAlive || 60,
-    clean_session: basic.cleanSession ? 1 : 0,
+    qos: basic.qosLevel ?? parseInt(advanced.defaultPublishQos) ?? 1,
+    keepalive: basic.keepaliveInterval || basic.keepAlive || 60,
+    clean_session: Boolean(basic.cleanSession),
 
     // 重连设置
     auto_reconnect: Boolean(advanced.autoReconnect),
@@ -314,7 +314,7 @@ export function validateConnectionForBackend(connection) {
   }
 
   if (!basic?.brokerHost?.trim() && !basic?.host?.trim()) {
-    errors.push('Broker地址(broker_host)不能为空')
+    errors.push('Broker地址(host)不能为空')
   }
 
   const port = basic?.brokerPort || basic?.port

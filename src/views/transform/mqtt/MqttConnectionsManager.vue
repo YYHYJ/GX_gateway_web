@@ -45,7 +45,7 @@
             <th>状态</th>
             <th>连接名称</th>
             <th>Broker地址</th>
-            <th>发布主题</th>
+            <th>主题</th>
             <th class="actions-column">操作</th>
           </tr>
         </thead>
@@ -83,54 +83,89 @@
               </div>
             </td>
 
-            <!-- 发布主题列 -->
+            <!-- 主题列 -->
             <td>
               <div class="topics-list">
-                <template v-if="hasPublishTopics(connection)">
-                  <div
-                    v-for="topic in getPublishTopics(connection)"
-                    :key="topic.id"
-                    class="topic-item"
-                    :class="{
-                      disabled: !topic.enabled,
-                      'processing-topic': isProcessingTopic(topic.id),
-                    }"
-                  >
-                    <span class="topic-path">{{ topic.topic }}</span>
-                    <select
-                      class="topic-scheme-select"
-                      :value="String(topic.scheme_id || '')"
-                      @click.stop
-                      @change="bindScheme(topic.id, $event.target.value)"
-                      title="绑定上报方案"
+                <template v-if="hasTopics(connection)">
+                  <div v-if="hasPublishTopics(connection)" class="topic-group">
+                    <div class="topic-group-title">发布</div>
+                    <div
+                      v-for="topic in getPublishTopics(connection)"
+                      :key="topic.id"
+                      class="topic-item"
+                      :class="{
+                        disabled: !topic.enabled,
+                        'processing-topic': isProcessingTopic(topic.id),
+                      }"
                     >
-                      <option value="">未绑定方案</option>
-                      <option v-for="s in schemes" :key="s.id" :value="String(s.id)">
-                        {{ s.scheme_name }}
-                      </option>
-                    </select>
-                    <span class="topic-qos">QoS {{ topic.qos }}</span>
-                    <button
-                      class="topic-toggle"
-                      @click.stop="toggleTopic(connection.id, topic.id)"
-                      :title="topic.enabled ? '禁用主题' : '启用主题'"
-                      :class="{ disabled: !topic.enabled }"
-                      :disabled="!connection.enabled || isProcessingTopic(topic.id)"
+                      <span class="topic-path">{{ topic.topic }}</span>
+                      <select
+                        class="topic-scheme-select"
+                        :value="getSchemeDisplayId(topic.scheme_id)"
+                        @click.stop
+                        @change="bindScheme(topic.id, $event.target.value)"
+                        title="绑定上报方案"
+                      >
+                        <option value="">未绑定方案</option>
+                        <option v-for="s in schemes" :key="s.id" :value="String(s.id)">
+                          {{ s.scheme_name }}
+                        </option>
+                      </select>
+                      <span class="topic-qos">QoS {{ topic.qos }}</span>
+                      <button
+                        class="topic-toggle"
+                        @click.stop="toggleTopic(connection.id, topic.id)"
+                        :title="topic.enabled ? '禁用主题' : '启用主题'"
+                        :class="{ disabled: !topic.enabled }"
+                        :disabled="!connection.enabled || isProcessingTopic(topic.id)"
+                      >
+                        {{ topic.enabled ? '禁用' : '启用' }}
+                      </button>
+                      <button
+                        class="topic-delete"
+                        @click.stop="deleteTopic(connection.id, topic.id)"
+                        :title="'删除主题: ' + topic.topic"
+                        :disabled="isProcessingTopic(topic.id)"
+                      >
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div v-if="hasSubscribeTopics(connection)" class="topic-group">
+                    <div class="topic-group-title">订阅</div>
+                    <div
+                      v-for="topic in getSubscribeTopics(connection)"
+                      :key="topic.id"
+                      class="topic-item"
+                      :class="{
+                        disabled: !topic.enabled,
+                        'processing-topic': isProcessingTopic(topic.id),
+                      }"
                     >
-                      {{ topic.enabled ? '禁用' : '启用' }}
-                    </button>
-                    <!-- 删除按钮 -->
-                    <button
-                      class="topic-delete"
-                      @click.stop="deleteTopic(connection.id, topic.id)"
-                      :title="'删除主题: ' + topic.topic"
-                      :disabled="isProcessingTopic(topic.id)"
-                    >
-                      <i class="fas fa-trash"></i>
-                    </button>
+                      <span class="topic-path">{{ topic.topic }}</span>
+                      <span class="topic-qos">QoS {{ topic.qos }}</span>
+                      <button
+                        class="topic-toggle"
+                        @click.stop="toggleTopic(connection.id, topic.id)"
+                        :title="topic.enabled ? '禁用主题' : '启用主题'"
+                        :class="{ disabled: !topic.enabled }"
+                        :disabled="!connection.enabled || isProcessingTopic(topic.id)"
+                      >
+                        {{ topic.enabled ? '禁用' : '启用' }}
+                      </button>
+                      <button
+                        class="topic-delete"
+                        @click.stop="deleteTopic(connection.id, topic.id)"
+                        :title="'删除主题: ' + topic.topic"
+                        :disabled="isProcessingTopic(topic.id)"
+                      >
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
                   </div>
                 </template>
-                <div v-else class="no-topics">无发布主题</div>
+                <div v-else class="no-topics">无主题</div>
               </div>
             </td>
 
@@ -207,6 +242,7 @@ export default {
       processingOperations: new Set(),
       statusTimer: null,
       schemes: [],
+      schemes: [],
     }
   },
   created() {
@@ -215,7 +251,7 @@ export default {
     this.startStatusPolling()
     this.loadSchemes()
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.stopStatusPolling()
   },
   methods: {
@@ -277,7 +313,7 @@ export default {
         })
 
         this.$emit('connections-loaded', updated)
-      } catch (e) {
+      } catch {
         // 静默失败，不影响界面
       }
     },
@@ -286,12 +322,23 @@ export default {
     async loadSchemes() {
       try {
         const res = await this.$axios.get('/api/mqtt/scheme')
-        if (res && res.code === 200 && Array.isArray(res.data)) {
-          this.schemes = res.data
+        const payload = res && res.data !== undefined ? res.data : res
+        let data = []
+        if (Array.isArray(payload)) {
+          data = payload
+        } else if (payload && Array.isArray(payload.data)) {
+          data = payload.data
         }
+        this.schemes = data
       } catch (e) {
         console.error('加载方案列表失败:', e)
       }
+    },
+
+    // 获取用于显示/比较的 scheme id（如果后端有重复记录，则返回代表 id）
+    getSchemeDisplayId(origId) {
+      if (!origId && origId !== 0) return ''
+      return String(origId)
     },
 
     // 绑定/解绑方案
@@ -408,8 +455,8 @@ export default {
 
         console.log(`开始${action}连接 ${connectionId}`)
 
-        // 调用toggleBroker方法
-        await this.mqttService.toggleBroker(connectionId, !currentEnabled)
+        // 调用toggleBroker方法，传入当前连接对象以避免字段丢失
+        await this.mqttService.toggleBroker(connectionId, !currentEnabled, connection)
 
         // ✅ 重新加载数据，而不是直接修改本地状态
         await this.loadConnections()
@@ -601,6 +648,14 @@ export default {
       return textMap[status] || status || '离线'
     },
 
+    // 检查是否有任何主题
+    hasTopics(connection) {
+      return (
+        this.getPublishTopics(connection).length > 0 ||
+        this.getSubscribeTopics(connection).length > 0
+      )
+    },
+
     // 检查是否有发布主题
     hasPublishTopics(connection) {
       return this.getPublishTopics(connection).length > 0
@@ -612,6 +667,20 @@ export default {
 
       return connection.topics.topics.filter((t) => {
         return t.type === 'publish' || t.direction === 0
+      })
+    },
+
+    // 检查是否有订阅主题
+    hasSubscribeTopics(connection) {
+      return this.getSubscribeTopics(connection).length > 0
+    },
+
+    // 获取订阅主题
+    getSubscribeTopics(connection) {
+      if (!connection.topics?.topics) return []
+
+      return connection.topics.topics.filter((t) => {
+        return t.type === 'subscribe' || t.direction === 1
       })
     },
   },
@@ -914,6 +983,18 @@ export default {
   max-height: 180px;
   overflow-y: auto;
   padding-right: 5px;
+}
+
+.topic-group {
+  padding: 8px 0;
+  border-top: 1px solid #f0f0f0;
+}
+
+.topic-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2f80ed;
+  margin-bottom: 6px;
 }
 
 .topic-item {

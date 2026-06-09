@@ -85,6 +85,11 @@ export default {
               path: '/data/device/instance',
             },
             {
+              id: 'point-alias',
+              name: '点位别名',
+              path: '/data/device/alias',
+            },
+            {
               id: 'device-instances-monitor',
               name: '实时监控',
               path: '/data/device/instances/monitor',
@@ -206,7 +211,9 @@ export default {
         }
         if (menu.children) {
           // 按路径长度降序匹配，避免短路径前缀误匹配
-          const sorted = [...menu.children].sort((a, b) => (b.path?.length || 0) - (a.path?.length || 0))
+          const sorted = [...menu.children].sort(
+            (a, b) => (b.path?.length || 0) - (a.path?.length || 0),
+          )
           for (const child of sorted) {
             if (child.path && path.startsWith(child.path)) {
               return { parent: menu.id, child: child.id }
@@ -232,7 +239,8 @@ export default {
       // 如果有激活的子菜单，展开其父菜单
       if (this.resolvedSubItem) {
         const parentMenu = this.menuItems.find(
-          (item) => item.children && item.children.some((child) => child.id === this.resolvedSubItem),
+          (item) =>
+            item.children && item.children.some((child) => child.id === this.resolvedSubItem),
         )
         if (parentMenu) return parentMenu.id
       }
@@ -252,7 +260,7 @@ export default {
     isNavActive(item) {
       if (this.resolvedActiveItem === item.id) return true
       if (item.children && item.children.length && this.resolvedSubItem) {
-        return item.children.some(child => child.id === this.resolvedSubItem)
+        return item.children.some((child) => child.id === this.resolvedSubItem)
       }
       return false
     },

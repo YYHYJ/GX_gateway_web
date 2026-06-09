@@ -307,7 +307,7 @@ export default {
         let statuses = []
         try {
           statuses = await mqttService.getBrokerStatuses()
-        } catch (e) {
+        } catch {
           // 忽略状态拉取错误，继续使用配置数据
         }
 
@@ -357,7 +357,7 @@ export default {
             id: t.id,
             type: 'publish',
             topic: t.topic_name,
-            qos: t.qos || 1,
+            qos: t.qos ?? 1,
             retain: false, // 数据库可能没有这个字段
             enabled: Boolean(t.enabled),
             description: t.description || '',
@@ -369,7 +369,7 @@ export default {
             id: t.id,
             type: 'subscribe',
             topic: t.topic_name,
-            qos: t.qos || 1,
+            qos: t.qos ?? 1,
             enabled: Boolean(t.enabled),
             description: t.description || '',
           }))
@@ -379,13 +379,13 @@ export default {
           basic: {
             enabled: Boolean(broker.enabled),
             brokerName: broker.broker_name || '',
-            brokerHost: broker.broker_host || '',
-            brokerPort: broker.broker_port || 1883,
+            brokerHost: broker.host || broker.broker_host || '',
+            brokerPort: broker.port || broker.broker_port || 1883,
             clientId: broker.client_id || `gateway_${Date.now()}`,
-            keepaliveInterval: broker.keepalive_interval || 60,
+            keepaliveInterval: (broker.keepalive ?? broker.keepalive_interval) || 60,
             connectionTimeout: broker.connection_timeout || 30,
             cleanSession: Boolean(broker.clean_session),
-            qosLevel: broker.qos_level?.toString() || '1',
+            qosLevel: (broker.qos ?? broker.qos_level)?.toString() || '1',
             tlsEnabled: Boolean(broker.tls_enabled),
           },
           auth: {
@@ -495,7 +495,7 @@ export default {
 
         // 4. 调用后端API创建broker
         console.log('创建broker请求数据:', backendData)
-        const response = await this.$axios.post('/api/mqtt/broker/config', backendData)
+        const response = await this.$axios.post('/api/mqtt/broker/create', backendData)
 
         // 根据您的API响应格式调整
         const createdBroker = response.data?.data || response.data
@@ -562,7 +562,7 @@ export default {
 
         // 4. 调用后端API更新连接
         console.log('更新broker请求数据:', updateData)
-        const response = await this.$axios.put('/api/mqtt/broker/config', updateData)
+        const response = await this.$axios.put('/api/mqtt/broker/update', updateData)
 
         const updatedBroker = response.data?.data || response.data
 
@@ -650,14 +650,13 @@ export default {
         if (!topics || topics.length === 0) return
 
         // 批量创建API
-        const response = await this.$axios.post('/api/mqtt/topic/config', {
-          broker_id: brokerId,
+        const response = await this.$axios.post('/api/mqtt/topic/create', {
           topics: topics.map((topic) => ({
             broker_id: brokerId,
             topic_name: topic.topic,
             direction: topic.type === 'publish' ? 0 : 1,
-            qos: topic.qos || 1,
-            enabled: topic.enabled ? 1 : 0,
+            qos: topic.qos ?? 1,
+            enabled: Boolean(topic.enabled),
             description: topic.description || '',
           })),
         })
@@ -707,8 +706,8 @@ export default {
             broker_id: brokerId,
             topic_name: t.topic,
             direction: t.type === 'publish' ? 0 : 1,
-            qos: t.qos || 1,
-            enabled: t.enabled ? 1 : 0,
+            qos: t.qos ?? 1,
+            enabled: Boolean(t.enabled),
             description: t.description || '',
           })
         }

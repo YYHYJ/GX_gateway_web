@@ -23,9 +23,15 @@
               @move="handleMove"
             />
             <div class="jte-root-add">
-              <button class="jte-add-btn" @click="addChild(template, 'leaf')"><i class="fas fa-plus"></i> 字段</button>
-              <button class="jte-add-btn jte-add-obj" @click="addChild(template, 'object')"><i class="fas fa-folder-plus"></i> 对象</button>
-              <button class="jte-add-btn jte-add-arr" @click="addChild(template, 'array')"><i class="fas fa-list-ol"></i> 数组</button>
+              <button class="jte-add-btn" @click="addChild(template, 'leaf')">
+                <i class="fas fa-plus"></i> 字段
+              </button>
+              <button class="jte-add-btn jte-add-obj" @click="addChild(template, 'object')">
+                <i class="fas fa-folder-plus"></i> 对象
+              </button>
+              <button class="jte-add-btn jte-add-arr" @click="addChild(template, 'array')">
+                <i class="fas fa-list-ol"></i> 数组
+              </button>
             </div>
           </div>
           <div class="jte-root-brace">}</div>
@@ -40,7 +46,9 @@
       <div class="jte-preview-panel">
         <div class="jte-panel-header">
           <span><i class="fas fa-eye"></i> 实时预览</span>
-          <button class="jte-copy-btn" @click="copyPreview" title="复制"><i class="fas fa-copy"></i></button>
+          <button class="jte-copy-btn" @click="copyPreview" title="复制">
+            <i class="fas fa-copy"></i>
+          </button>
         </div>
         <div class="jte-preview-body">
           <pre class="jte-json">{{ previewJson }}</pre>
@@ -51,8 +59,12 @@
     <!-- 编辑面板 -->
     <div v-if="selectedNode" class="jte-editor">
       <div class="jte-editor-header">
-        <span><i class="fas fa-edit"></i> 编辑：<code>"{{ selectedNode.key || '未命名' }}"</code></span>
-        <button class="jte-close-btn" @click="selectedId = null"><i class="fas fa-times"></i></button>
+        <span
+          ><i class="fas fa-edit"></i> 编辑：<code>"{{ selectedNode.key || '未命名' }}"</code></span
+        >
+        <button class="jte-close-btn" @click="selectedId = null">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
       <div class="jte-editor-body">
         <!-- 字段名（数组内的元素不需要key） -->
@@ -67,18 +79,21 @@
 
         <!-- 对象节点 -->
         <div v-if="selectedNode.type === 'object'" class="jte-container-hint">
-          <i class="fas fa-folder-open" style="color:#f39c12"></i>
+          <i class="fas fa-folder-open" style="color: #f39c12"></i>
           对象节点 — 可手动添加子字段，或开启自动填充
         </div>
 
         <!-- 数组节点 -->
         <div v-else-if="selectedNode.type === 'array'" class="jte-container-hint">
-          <i class="fas fa-list" style="color:#9b59b6"></i>
+          <i class="fas fa-list" style="color: #9b59b6"></i>
           数组节点 — 可手动添加元素，或开启自动填充
         </div>
 
         <!-- 自动填充开关（对象和数组节点都有） -->
-        <div v-if="selectedNode.type === 'object' || selectedNode.type === 'array'" class="jte-autofill">
+        <div
+          v-if="selectedNode.type === 'object' || selectedNode.type === 'array'"
+          class="jte-autofill"
+        >
           <label class="jte-autofill-toggle">
             <input type="checkbox" v-model="selectedNode.auto_fill" />
             <span>自动填充方案内所有点位</span>
@@ -89,17 +104,26 @@
               <label>填充模式</label>
               <select v-model="selectedNode.fill_mode">
                 <template v-if="selectedNode.type === 'object'">
-                  <option value="flat_kv">平铺键值对 — {"TEMP_001": 25.6, "PRESS_001": 101.3}</option>
+                  <option value="flat_kv">
+                    平铺键值对 — {"TEMP_001": 25.6, "PRESS_001": 101.3}
+                  </option>
                 </template>
                 <template v-if="selectedNode.type === 'array'">
                   <option value="array_simple">简单值 — [25.6, 101.3, 1]</option>
                   <option value="array_kv">点位键值 — [{"TEMP_001": 25.6}, ...]</option>
-                  <option value="array_id_value">ID+值 — [{"id": "TEMP_001", "value": 25.6}, ...]</option>
-                  <option value="array_full">完整对象 — [{"point_code": "...", "name": "...", "value": ...}]</option>
+                  <option value="array_id_value">
+                    ID+值 — [{"id": "TEMP_001", "value": 25.6}, ...]
+                  </option>
+                  <option value="array_full">
+                    完整对象 — [{"point_code": "...", "name": "...", "value": ...}]
+                  </option>
                 </template>
               </select>
             </div>
-            <div v-if="selectedNode.fill_mode === 'flat_kv' || selectedNode.fill_mode === 'array_kv'" class="jte-field">
+            <div
+              v-if="selectedNode.fill_mode === 'flat_kv' || selectedNode.fill_mode === 'array_kv'"
+              class="jte-field"
+            >
               <label>key 来源</label>
               <select v-model="selectedNode.key_field">
                 <option value="point_code">点位代码 (point_code)</option>
@@ -108,7 +132,8 @@
             </div>
             <div class="jte-autofill-preview">
               <i class="fas fa-info-circle"></i>
-              运行时将自动填充方案内所有点位（当前 {{ reportPoints.length }} 个），手动添加的子节点仍会保留
+              运行时将自动填充方案内所有点位（当前
+              {{ reportPoints.length }} 个），手动添加的子节点仍会保留
             </div>
           </div>
         </div>
@@ -118,13 +143,22 @@
           <div class="jte-field">
             <label>值来源</label>
             <div class="jte-source-tabs">
-              <button :class="{ active: selectedNode.source === 'point' }" @click="setSource('point')">
+              <button
+                :class="{ active: selectedNode.source === 'point' }"
+                @click="setSource('point')"
+              >
                 <i class="fas fa-database"></i> 上报点位
               </button>
-              <button :class="{ active: selectedNode.source === 'fixed' }" @click="setSource('fixed')">
+              <button
+                :class="{ active: selectedNode.source === 'fixed' }"
+                @click="setSource('fixed')"
+              >
                 <i class="fas fa-lock"></i> 固定值
               </button>
-              <button :class="{ active: selectedNode.source === 'system' }" @click="setSource('system')">
+              <button
+                :class="{ active: selectedNode.source === 'system' }"
+                @click="setSource('system')"
+              >
                 <i class="fas fa-cog"></i> 系统变量
               </button>
             </div>
@@ -136,8 +170,9 @@
             <select v-model="selectedNode.point_id">
               <option value="">请选择</option>
               <option v-for="rp in reportPoints" :key="rp.id" :value="rp.id">
-                {{ rp.point_code }}{{ rp.report_alias ? ' → ' + rp.report_alias : '' }}
-                ({{ getDeviceName(rp.device_id) }})
+                {{ rp.point_code }}{{ rp.report_alias ? ' → ' + rp.report_alias : '' }} ({{
+                  getDeviceName(rp.device_id)
+                }})
               </option>
             </select>
             <span v-if="reportPoints.length === 0" class="jte-hint">
@@ -182,7 +217,9 @@
 import JteNode from './JteNode.vue'
 
 let _nid = 0
-function gid() { return ++_nid }
+function gid() {
+  return ++_nid
+}
 
 function mkNode(type, extra = {}) {
   return {
@@ -195,7 +232,7 @@ function mkNode(type, extra = {}) {
     auto_fill: false,
     fill_mode: type === 'object' ? 'flat_kv' : 'array_kv',
     key_field: 'point_code',
-    children: (type === 'object' || type === 'array') ? [] : undefined,
+    children: type === 'object' || type === 'array' ? [] : undefined,
     ...extra,
   }
 }
@@ -224,8 +261,11 @@ export default {
       return this.isNodeInArray(this.template, this.selectedId)
     },
     previewJson() {
-      try { return JSON.stringify(this.buildPreview(this.template), null, 2) }
-      catch (e) { return '{ }' }
+      try {
+        return JSON.stringify(this.buildPreview(this.template), null, 2)
+      } catch (e) {
+        return '{ }'
+      }
     },
   },
   created() {
@@ -237,9 +277,37 @@ export default {
     // ========== 加载 ==========
     async loadReportPoints() {
       try {
-        const res = await this.$axios.get('/api/mqtt/report_points', { params: { scheme_id: this.schemeId } })
-        if (res && res.code === 200 && Array.isArray(res.data)) this.reportPoints = res.data
-      } catch (e) { console.error('加载上报点位失败:', e) }
+        const res = await this.$axios.get('/api/mqtt/report_points', {
+          params: { scheme_id: this.schemeId },
+        })
+        if (res && res.code === 200 && Array.isArray(res.data)) {
+          // 为每个点位加载alias信息
+          const points = res.data
+          for (const point of points) {
+            try {
+              const aliasRes = await this.$axios.get('/api/point_alias/list', {
+                params: { device_id: point.device_id },
+              })
+              let aliasData = []
+              if (Array.isArray(aliasRes)) {
+                aliasData = aliasRes
+              } else if (aliasRes && aliasRes.code === 200) {
+                aliasData = aliasRes.data || aliasRes
+              }
+              // 找到匹配的点位的alias
+              const match = aliasData.find((a) => a.point_code === point.point_code)
+              if (match) {
+                point.alias = match.alias
+              }
+            } catch (e) {
+              console.error(`加载点位${point.point_code}的alias失败:`, e)
+            }
+          }
+          this.reportPoints = points
+        }
+      } catch (e) {
+        console.error('加载上报点位失败:', e)
+      }
     },
 
     async loadDevices() {
@@ -251,7 +319,9 @@ export default {
 
     async loadTemplate() {
       try {
-        const res = await this.$axios.get('/api/mqtt/report_template', { params: { scheme_id: this.schemeId } })
+        const res = await this.$axios.get('/api/mqtt/report_template', {
+          params: { scheme_id: this.schemeId },
+        })
         if (res && res.code === 200 && res.data?.template) {
           this.template = this.hydrateIds(res.data.template)
         }
@@ -287,7 +357,9 @@ export default {
       parent.children.splice(idx, 1)
     },
 
-    selectNode(id) { this.selectedId = id },
+    selectNode(id) {
+      this.selectedId = id
+    },
 
     // 删除：通过 id 递归查找并删除
     handleRemove(id) {
@@ -297,7 +369,10 @@ export default {
 
     removeById(children, id) {
       const idx = children.findIndex((c) => c._id === id)
-      if (idx !== -1) { children.splice(idx, 1); return true }
+      if (idx !== -1) {
+        children.splice(idx, 1)
+        return true
+      }
       for (const c of children) {
         if (c.children && this.removeById(c.children, id)) return true
       }
@@ -333,13 +408,16 @@ export default {
     findNode(children, id) {
       for (const c of children) {
         if (c._id === id) return c
-        if (c.children) { const f = this.findNode(c.children, id); if (f) return f }
+        if (c.children) {
+          const f = this.findNode(c.children, id)
+          if (f) return f
+        }
       }
       return null
     },
 
     isNodeInArray(parent, id) {
-      for (const c of (parent.children || [])) {
+      for (const c of parent.children || []) {
         if (c._id === id) return parent.type === 'array'
         if (c.children) {
           const found = this.isNodeInArray(c, id)
@@ -359,13 +437,13 @@ export default {
       if (node.type === 'object') {
         const obj = {}
         // 手动添加的子节点
-        for (const c of (node.children || [])) {
+        for (const c of node.children || []) {
           obj[c.key || '未命名'] = this.nodePreviewValue(c)
         }
         // 自动填充
         if (node.auto_fill && node.fill_mode === 'flat_kv') {
           for (const rp of this.reportPoints) {
-            const k = node.key_field === 'report_alias' && rp.report_alias ? rp.report_alias : rp.point_code
+            const k = rp.alias || rp.report_alias || rp.point_code
             obj[k] = `<${rp.point_code}>`
           }
         }
@@ -374,25 +452,33 @@ export default {
       if (node.type === 'array') {
         const arr = []
         // 手动添加的子节点
-        for (const c of (node.children || [])) {
+        for (const c of node.children || []) {
           arr.push(this.nodePreviewValue(c))
         }
         // 自动填充
         if (node.auto_fill) {
           const sample = this.reportPoints.slice(0, 3)
           for (const rp of sample) {
-            const k = node.key_field === 'report_alias' && rp.report_alias ? rp.report_alias : rp.point_code
+            const k = rp.alias || rp.report_alias || rp.point_code
             if (node.fill_mode === 'array_simple') {
               arr.push(`<${rp.point_code}>`)
             } else if (node.fill_mode === 'array_kv') {
-              const o = {}; o[k] = `<${rp.point_code}>`; arr.push(o)
+              const o = {}
+              o[k] = `<${rp.point_code}>`
+              arr.push(o)
             } else if (node.fill_mode === 'array_id_value') {
               arr.push({ id: k, value: `<${rp.point_code}>` })
             } else if (node.fill_mode === 'array_full') {
-              arr.push({ point_code: rp.point_code, name: rp.report_alias || rp.point_code, device: this.getDeviceName(rp.device_id), value: `<${rp.point_code}>` })
+              arr.push({
+                point_code: rp.point_code,
+                name: rp.alias || rp.report_alias || rp.point_code,
+                device: this.getDeviceName(rp.device_id),
+                value: `<${rp.point_code}>`,
+              })
             }
           }
-          if (this.reportPoints.length > 3) arr.push('...' + (this.reportPoints.length - 3) + ' more')
+          if (this.reportPoints.length > 3)
+            arr.push('...' + (this.reportPoints.length - 3) + ' more')
         }
         return arr
       }
@@ -419,18 +505,29 @@ export default {
 
     // ========== 序列化 ==========
     hydrateIds(t) {
-      const h = (n) => { n._id = gid(); if (n.children) n.children.forEach(h); return n }
+      const h = (n) => {
+        n._id = gid()
+        if (n.children) n.children.forEach(h)
+        return n
+      }
       return h(JSON.parse(JSON.stringify(t || { type: 'object', children: [] })))
     },
     stripIds(t) {
-      const s = (n) => { const { _id, _rp_id, ...r } = n; if (r.children) r.children = r.children.map(s); return r }
+      const s = (n) => {
+        const { _id, _rp_id, ...r } = n
+        if (r.children) r.children = r.children.map(s)
+        return r
+      }
       return s(JSON.parse(JSON.stringify(t)))
     },
 
     copyPreview() {
-      navigator.clipboard.writeText(this.previewJson).then(() => {
-        this.$message && this.$message.success('已复制')
-      }).catch(() => {})
+      navigator.clipboard
+        .writeText(this.previewJson)
+        .then(() => {
+          this.$message && this.$message.success('已复制')
+        })
+        .catch(() => {})
     },
 
     resetTemplate() {
@@ -441,150 +538,367 @@ export default {
     },
 
     // 供父组件刷新点位列表（切换tab时）
-    refreshReportPoints() { this.loadReportPoints() },
+    refreshReportPoints() {
+      this.loadReportPoints()
+    },
   },
 }
 </script>
 
 <style scoped>
-.jte { display: flex; flex-direction: column; gap: 12px; }
-.jte-main { display: flex; gap: 12px; }
-
-.jte-tree-panel, .jte-preview-panel {
-  flex: 1; border: 1px solid #e1e5e9; border-radius: 8px;
-  display: flex; flex-direction: column; background: #fff; min-width: 0;
+.jte {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
-.jte-tree-panel { flex: 1.3; }
-.jte-preview-panel { flex: 0.7; }
+.jte-main {
+  display: flex;
+  gap: 12px;
+}
+
+.jte-tree-panel,
+.jte-preview-panel {
+  flex: 1;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  min-width: 0;
+}
+.jte-tree-panel {
+  flex: 1.3;
+}
+.jte-preview-panel {
+  flex: 0.7;
+}
 
 .jte-panel-header {
-  padding: 10px 14px; border-bottom: 1px solid #e1e5e9;
-  background: #f8fafc; border-radius: 8px 8px 0 0;
-  display: flex; justify-content: space-between; align-items: center;
-  font-size: 14px; font-weight: 600; color: #2c3e50;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e1e5e9;
+  background: #f8fafc;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
 }
-.jte-panel-header i { margin-right: 6px; color: #7f8c8d; }
+.jte-panel-header i {
+  margin-right: 6px;
+  color: #7f8c8d;
+}
 
 .jte-copy-btn {
-  background: none; border: 1px solid #d1d9e6; border-radius: 4px;
-  padding: 4px 8px; cursor: pointer; color: #7f8c8d; font-size: 12px;
+  background: none;
+  border: 1px solid #d1d9e6;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: #7f8c8d;
+  font-size: 12px;
 }
-.jte-copy-btn:hover { background: #3498db; color: #fff; border-color: #3498db; }
+.jte-copy-btn:hover {
+  background: #3498db;
+  color: #fff;
+  border-color: #3498db;
+}
 
-.jte-tree-body { flex: 1; overflow-y: auto; padding: 10px 12px; min-height: 240px; max-height: 400px; }
+.jte-tree-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px;
+  min-height: 240px;
+  max-height: 400px;
+}
 
 .jte-root-brace {
-  font-family: 'Menlo','Monaco',monospace; font-size: 14px;
-  font-weight: 700; color: #2c3e50; padding: 2px 4px;
+  font-family: 'Menlo', 'Monaco', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: #2c3e50;
+  padding: 2px 4px;
 }
-.jte-tree-content { padding: 4px 0 4px 8px; }
+.jte-tree-content {
+  padding: 4px 0 4px 8px;
+}
 
 .jte-root-add {
-  display: flex; gap: 8px; padding: 8px 4px; margin-top: 4px;
+  display: flex;
+  gap: 8px;
+  padding: 8px 4px;
+  margin-top: 4px;
   border-top: 1px dashed #e1e5e9;
 }
 .jte-add-btn {
-  padding: 5px 14px; border: 1px dashed #bdc3c7; border-radius: 5px;
-  background: none; cursor: pointer; font-size: 12px; color: #7f8c8d;
-  display: flex; align-items: center; gap: 5px; transition: all 0.15s;
+  padding: 5px 14px;
+  border: 1px dashed #bdc3c7;
+  border-radius: 5px;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: #7f8c8d;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
 }
-.jte-add-btn:hover { border-color: #3498db; color: #3498db; background: #f0f7ff; }
-.jte-add-obj:hover { border-color: #f39c12; color: #e67e22; background: #fef9e7; }
-.jte-add-arr:hover { border-color: #9b59b6; color: #8e44ad; background: #f5eef8; }
+.jte-add-btn:hover {
+  border-color: #3498db;
+  color: #3498db;
+  background: #f0f7ff;
+}
+.jte-add-obj:hover {
+  border-color: #f39c12;
+  color: #e67e22;
+  background: #fef9e7;
+}
+.jte-add-arr:hover {
+  border-color: #9b59b6;
+  color: #8e44ad;
+  background: #f5eef8;
+}
 
 .jte-empty {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 30px 0; color: #95a5a6; gap: 8px; font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 0;
+  color: #95a5a6;
+  gap: 8px;
+  font-size: 13px;
 }
-.jte-empty i { font-size: 32px; color: #bdc3c7; }
+.jte-empty i {
+  font-size: 32px;
+  color: #bdc3c7;
+}
 
 .jte-preview-body {
-  flex: 1; overflow: auto; padding: 14px;
-  min-height: 240px; max-height: 400px;
-  background: #1e1e1e; border-radius: 0 0 8px 8px;
+  flex: 1;
+  overflow: auto;
+  padding: 14px;
+  min-height: 240px;
+  max-height: 400px;
+  background: #1e1e1e;
+  border-radius: 0 0 8px 8px;
 }
 .jte-json {
-  margin: 0; font-family: 'Menlo','Monaco',monospace; font-size: 13px;
-  line-height: 1.7; color: #d4d4d4; white-space: pre-wrap; word-break: break-all;
+  margin: 0;
+  font-family: 'Menlo', 'Monaco', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #d4d4d4;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 /* 编辑面板 */
-.jte-editor { border: 1px solid #e1e5e9; border-radius: 8px; background: #fff; overflow: hidden; }
+.jte-editor {
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
 
 .jte-editor-header {
-  padding: 10px 14px; border-bottom: 1px solid #e1e5e9; background: #f8fafc;
-  display: flex; justify-content: space-between; align-items: center;
-  font-size: 14px; font-weight: 600; color: #2c3e50;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e1e5e9;
+  background: #f8fafc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
 }
-.jte-editor-header code { background: #edf2f7; padding: 2px 8px; border-radius: 3px; font-size: 13px; color: #c0392b; }
+.jte-editor-header code {
+  background: #edf2f7;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 13px;
+  color: #c0392b;
+}
 
-.jte-close-btn { background: none; border: none; color: #95a5a6; cursor: pointer; font-size: 14px; padding: 4px; }
-.jte-close-btn:hover { color: #e74c3c; }
+.jte-close-btn {
+  background: none;
+  border: none;
+  color: #95a5a6;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+}
+.jte-close-btn:hover {
+  color: #e74c3c;
+}
 
-.jte-editor-body { padding: 16px; display: flex; flex-wrap: wrap; gap: 16px; }
+.jte-editor-body {
+  padding: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
 
 .jte-editor-empty {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 24px; color: #95a5a6; font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: #95a5a6;
+  font-size: 13px;
 }
 
-.jte-field { display: flex; flex-direction: column; gap: 6px; min-width: 200px; flex: 1; }
-.jte-field-row { display: flex; gap: 16px; width: 100%; }
-
-.jte-field label { font-size: 13px; font-weight: 500; color: #34495e; }
-.jte-field input, .jte-field select {
-  padding: 8px 10px; border: 1px solid #d1d9e6; border-radius: 5px;
-  font-size: 13px; color: #2c3e50; background: #fff;
+.jte-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+  flex: 1;
 }
-.jte-field input:focus, .jte-field select:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52,152,219,.1); }
+.jte-field-row {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+}
 
-.jte-hint { font-size: 11px; color: #95a5a6; display: flex; align-items: center; gap: 4px; }
-.jte-hint i { color: #f39c12; }
+.jte-field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #34495e;
+}
+.jte-field input,
+.jte-field select {
+  padding: 8px 10px;
+  border: 1px solid #d1d9e6;
+  border-radius: 5px;
+  font-size: 13px;
+  color: #2c3e50;
+  background: #fff;
+}
+.jte-field input:focus,
+.jte-field select:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
 
-.jte-source-tabs { display: flex; gap: 6px; }
+.jte-hint {
+  font-size: 11px;
+  color: #95a5a6;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.jte-hint i {
+  color: #f39c12;
+}
+
+.jte-source-tabs {
+  display: flex;
+  gap: 6px;
+}
 .jte-source-tabs button {
-  padding: 7px 14px; border: 1px solid #d1d9e6; border-radius: 5px;
-  background: #fff; cursor: pointer; font-size: 12px; color: #7f8c8d;
-  display: flex; align-items: center; gap: 5px; transition: all 0.15s;
+  padding: 7px 14px;
+  border: 1px solid #d1d9e6;
+  border-radius: 5px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  color: #7f8c8d;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
 }
-.jte-source-tabs button:hover { border-color: #3498db; color: #3498db; }
-.jte-source-tabs button.active { background: #3498db; color: #fff; border-color: #3498db; }
+.jte-source-tabs button:hover {
+  border-color: #3498db;
+  color: #3498db;
+}
+.jte-source-tabs button.active {
+  background: #3498db;
+  color: #fff;
+  border-color: #3498db;
+}
 
 .jte-container-hint {
-  display: flex; align-items: center; gap: 8px;
-  padding: 12px 16px; border-radius: 6px; font-size: 13px; width: 100%;
-  background: #fef9e7; border: 1px solid #fdeaa8; color: #856404;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  width: 100%;
+  background: #fef9e7;
+  border: 1px solid #fdeaa8;
+  color: #856404;
 }
 
 /* 自动填充 */
-.jte-autofill { width: 100%; }
+.jte-autofill {
+  width: 100%;
+}
 
 .jte-autofill-toggle {
-  display: flex; align-items: center; gap: 8px; cursor: pointer;
-  font-size: 14px; font-weight: 500; color: #2c3e50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2c3e50;
   padding: 8px 0;
 }
-.jte-autofill-toggle input { width: 16px; height: 16px; cursor: pointer; }
+.jte-autofill-toggle input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
 
 .jte-autofill-options {
-  padding: 12px 16px; background: #f8fafc; border: 1px solid #e1e5e9;
-  border-radius: 6px; display: flex; flex-direction: column; gap: 12px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border: 1px solid #e1e5e9;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   margin-top: 4px;
 }
 
 .jte-autofill-preview {
-  font-size: 12px; color: #7f8c8d;
-  display: flex; align-items: center; gap: 6px;
-  padding: 8px 12px; background: #e8f5e9; border-radius: 4px;
-  border: 1px solid #c8e6c9; color: #2e7d32;
+  font-size: 12px;
+  color: #7f8c8d;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #e8f5e9;
+  border-radius: 4px;
+  border: 1px solid #c8e6c9;
+  color: #2e7d32;
 }
-.jte-autofill-preview i { color: #43a047; }
+.jte-autofill-preview i {
+  color: #43a047;
+}
 
-.jte-tree-body::-webkit-scrollbar, .jte-preview-body::-webkit-scrollbar { width: 5px; }
-.jte-tree-body::-webkit-scrollbar-thumb, .jte-preview-body::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+.jte-tree-body::-webkit-scrollbar,
+.jte-preview-body::-webkit-scrollbar {
+  width: 5px;
+}
+.jte-tree-body::-webkit-scrollbar-thumb,
+.jte-preview-body::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
 
 @media (max-width: 768px) {
-  .jte-main { flex-direction: column; }
-  .jte-source-tabs { flex-wrap: wrap; }
+  .jte-main {
+    flex-direction: column;
+  }
+  .jte-source-tabs {
+    flex-wrap: wrap;
+  }
 }
 </style>

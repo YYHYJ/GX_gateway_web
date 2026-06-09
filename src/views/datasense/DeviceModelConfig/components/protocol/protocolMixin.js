@@ -13,7 +13,7 @@ export const protocolMixin = {
       totalPages: 1,
       searchText: '',
       currentPage: 1,
-      pageSize: 10,
+      pageSize: 50,
       showDialog: false,
       editingPoint: null,
     }
@@ -21,7 +21,9 @@ export const protocolMixin = {
 
   computed: {
     hasSearchFilter() {
-      return this.searchText.trim() !== '' || Object.values(this.filters || {}).some(v => v !== '')
+      return (
+        this.searchText.trim() !== '' || Object.values(this.filters || {}).some((v) => v !== '')
+      )
     },
 
     pageNumbers() {

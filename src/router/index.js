@@ -56,6 +56,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/data/device/alias',
+    name: 'PointAliasConfig',
+    component: () => import('@/views/datasense/PointAliasConfig/PointAliasConfig.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/data/device/instance/monitor',
     name: 'Datamonitor',
     component: () => import('@/views/datasense/DeviceConfig/DataMonitor.vue'),
@@ -90,7 +96,11 @@ const routes = [
     path: '/system/communication-interface',
     name: 'CommunicationInterface',
     component: () => import('@/views/systemmanagement/CommunicationInterface.vue'),
-    meta: { requiresAuth: true, activeNav: 'system-management', activeSubItem: 'communication-interface' },
+    meta: {
+      requiresAuth: true,
+      activeNav: 'system-management',
+      activeSubItem: 'communication-interface',
+    },
   },
   {
     path: '/system/network',

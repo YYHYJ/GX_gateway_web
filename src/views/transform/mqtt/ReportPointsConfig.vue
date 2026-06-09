@@ -14,107 +14,153 @@
 
     <!-- 穿梭框 -->
     <div class="rp-transfer">
-        <!-- 左侧：可选点位 -->
-        <div class="rp-panel rp-left">
-          <div class="rp-panel-header">
-            <span class="rp-panel-title">可选点位</span>
-            <div class="rp-panel-actions">
-              <button class="rp-btn-selall" @click="selectAllLeft" v-if="filteredAvailable.length > 0" title="全选">全选</button>
-              <span class="rp-panel-count" v-if="filteredAvailable.length > 0">{{ leftSelected.length }}/{{ filteredAvailable.length }}</span>
+      <!-- 左侧：可选点位 -->
+      <div class="rp-panel rp-left">
+        <div class="rp-panel-header">
+          <span class="rp-panel-title">可选点位</span>
+          <div class="rp-panel-actions">
+            <button
+              class="rp-btn-selall"
+              @click="selectAllLeft"
+              v-if="filteredAvailable.length > 0"
+              title="全选"
+            >
+              全选
+            </button>
+            <span class="rp-panel-count" v-if="filteredAvailable.length > 0"
+              >{{ leftSelected.length }}/{{ filteredAvailable.length }}</span
+            >
+          </div>
+        </div>
+        <div class="rp-search">
+          <input type="text" v-model="searchLeft" placeholder="搜索点位代码/名称..." />
+        </div>
+        <div class="rp-panel-body">
+          <div v-if="!selectedDeviceId" class="rp-placeholder">
+            <i class="fas fa-hand-pointer"></i>
+            <span>请先选择设备</span>
+          </div>
+          <div v-else-if="loadingPoints" class="rp-placeholder">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>加载中...</span>
+          </div>
+          <div v-else-if="filteredAvailable.length === 0" class="rp-placeholder">
+            <i class="fas fa-inbox"></i>
+            <span>{{ searchLeft ? '无匹配点位' : '该设备无可选点位' }}</span>
+          </div>
+          <div v-else class="rp-list">
+            <div
+              v-for="p in filteredAvailable"
+              :key="p.point_code"
+              class="rp-item"
+              :class="{
+                selected: leftSelected.includes(p.point_code),
+                added: isAlreadyAdded(p.point_code),
+              }"
+              @click="!isAlreadyAdded(p.point_code) && toggleLeftSelect(p.point_code)"
+            >
+              <input
+                type="checkbox"
+                :checked="leftSelected.includes(p.point_code)"
+                :disabled="isAlreadyAdded(p.point_code)"
+                @click.stop="!isAlreadyAdded(p.point_code) && toggleLeftSelect(p.point_code)"
+              />
+              <div class="rp-item-info">
+                <span class="rp-item-code">{{ p.point_code }}</span>
+                <span class="rp-item-name">{{ p.point_name }}</span>
+                <span v-if="p.alias" class="rp-item-alias">{{ p.alias }}</span>
+              </div>
+              <span v-if="isAlreadyAdded(p.point_code)" class="rp-added-tag">已添加</span>
             </div>
           </div>
-          <div class="rp-search">
-            <input type="text" v-model="searchLeft" placeholder="搜索点位代码/名称..." />
+        </div>
+      </div>
+
+      <!-- 中间：操作按钮 -->
+      <div class="rp-actions">
+        <button
+          class="rp-btn-transfer"
+          @click="addToRight"
+          :disabled="leftSelected.length === 0 || submitting"
+          title="添加到右侧"
+        >
+          <i class="fas fa-chevron-right"></i>
+        </button>
+        <button
+          class="rp-btn-transfer"
+          @click="removeFromRight"
+          :disabled="rightSelected.length === 0 || submitting"
+          title="从右侧移除"
+        >
+          <i class="fas fa-chevron-left"></i>
+        </button>
+      </div>
+
+      <!-- 右侧：已选上报点位 -->
+      <div class="rp-panel rp-right">
+        <div class="rp-panel-header">
+          <span class="rp-panel-title">已选上报点位</span>
+          <div class="rp-panel-actions">
+            <button
+              class="rp-btn-selall"
+              @click="selectAllRight"
+              v-if="filteredConfigured.length > 0"
+              title="全选"
+            >
+              全选
+            </button>
+            <span class="rp-panel-count" v-if="configuredPoints.length > 0"
+              >{{ rightSelected.length }}/{{ configuredPoints.length }}</span
+            >
           </div>
-          <div class="rp-panel-body">
-            <div v-if="!selectedDeviceId" class="rp-placeholder">
-              <i class="fas fa-hand-pointer"></i>
-              <span>请先选择设备</span>
-            </div>
-            <div v-else-if="loadingPoints" class="rp-placeholder">
-              <i class="fas fa-spinner fa-spin"></i>
-              <span>加载中...</span>
-            </div>
-            <div v-else-if="filteredAvailable.length === 0" class="rp-placeholder">
-              <i class="fas fa-inbox"></i>
-              <span>{{ searchLeft ? '无匹配点位' : '该设备无可选点位' }}</span>
-            </div>
-            <div v-else class="rp-list">
-              <div
-                v-for="p in filteredAvailable"
-                :key="p.point_code"
-                class="rp-item"
-                :class="{ selected: leftSelected.includes(p.point_code), added: isAlreadyAdded(p.point_code) }"
-                @click="!isAlreadyAdded(p.point_code) && toggleLeftSelect(p.point_code)"
-              >
-                <input type="checkbox" :checked="leftSelected.includes(p.point_code)" :disabled="isAlreadyAdded(p.point_code)" @click.stop="!isAlreadyAdded(p.point_code) && toggleLeftSelect(p.point_code)" />
-                <div class="rp-item-info">
-                  <span class="rp-item-code">{{ p.point_code }}</span>
-                  <span class="rp-item-name">{{ p.point_name }}</span>
-                </div>
-                <span v-if="isAlreadyAdded(p.point_code)" class="rp-added-tag">已添加</span>
+        </div>
+        <div class="rp-search">
+          <input type="text" v-model="searchRight" placeholder="搜索已选点位..." />
+        </div>
+        <div class="rp-panel-body">
+          <div v-if="loadingConfig" class="rp-placeholder">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>加载中...</span>
+          </div>
+          <div v-else-if="filteredConfigured.length === 0" class="rp-placeholder">
+            <i class="fas fa-inbox"></i>
+            <span>{{ searchRight ? '无匹配' : '未配置，将全量上报' }}</span>
+          </div>
+          <div v-else class="rp-list">
+            <div
+              v-for="rp in filteredConfigured"
+              :key="rp.id"
+              class="rp-item rp-item-right"
+              :class="{
+                selected: rightSelected.includes(rp.id),
+                disabled: selectedDeviceId && rp.device_id != selectedDeviceId,
+              }"
+              @click="
+                selectedDeviceId && rp.device_id != selectedDeviceId
+                  ? null
+                  : toggleRightSelect(rp.id)
+              "
+            >
+              <input
+                type="checkbox"
+                :checked="rightSelected.includes(rp.id)"
+                @click.stop="
+                  rp.device_id == selectedDeviceId || !selectedDeviceId
+                    ? toggleRightSelect(rp.id)
+                    : null
+                "
+              />
+              <div class="rp-item-info rp-item-info-right">
+                <span class="rp-item-code">{{ rp.point_code }}</span>
+                <span class="rp-item-device">{{ getPointNameFallback(rp) }}</span>
+                <span v-if="getAliasFallback(rp)" class="rp-item-alias">{{
+                  getAliasFallback(rp)
+                }}</span>
               </div>
             </div>
           </div>
         </div>
-
-        <!-- 中间：操作按钮 -->
-        <div class="rp-actions">
-          <button class="rp-btn-transfer" @click="addToRight" :disabled="leftSelected.length === 0 || submitting" title="添加到右侧">
-            <i class="fas fa-chevron-right"></i>
-          </button>
-          <button class="rp-btn-transfer" @click="removeFromRight" :disabled="rightSelected.length === 0 || submitting" title="从右侧移除">
-            <i class="fas fa-chevron-left"></i>
-          </button>
-        </div>
-
-        <!-- 右侧：已选上报点位 -->
-        <div class="rp-panel rp-right">
-          <div class="rp-panel-header">
-            <span class="rp-panel-title">已选上报点位</span>
-            <div class="rp-panel-actions">
-              <button class="rp-btn-selall" @click="selectAllRight" v-if="filteredConfigured.length > 0" title="全选">全选</button>
-              <span class="rp-panel-count" v-if="configuredPoints.length > 0">{{ rightSelected.length }}/{{ configuredPoints.length }}</span>
-            </div>
-          </div>
-          <div class="rp-search">
-            <input type="text" v-model="searchRight" placeholder="搜索已选点位..." />
-          </div>
-          <div class="rp-panel-body">
-            <div v-if="loadingConfig" class="rp-placeholder">
-              <i class="fas fa-spinner fa-spin"></i>
-              <span>加载中...</span>
-            </div>
-            <div v-else-if="filteredConfigured.length === 0" class="rp-placeholder">
-              <i class="fas fa-inbox"></i>
-              <span>{{ searchRight ? '无匹配' : '未配置，将全量上报' }}</span>
-            </div>
-            <div v-else class="rp-list">
-              <div
-                v-for="rp in filteredConfigured"
-                :key="rp.id"
-                class="rp-item rp-item-right"
-                :class="{ selected: rightSelected.includes(rp.id) }"
-                @click="toggleRightSelect(rp.id)"
-              >
-                <input type="checkbox" :checked="rightSelected.includes(rp.id)" @click.stop="toggleRightSelect(rp.id)" />
-                <div class="rp-item-info">
-                  <span class="rp-item-code">{{ rp.point_code }}</span>
-                  <span class="rp-item-device">{{ getDeviceName(rp.device_id) }}</span>
-                </div>
-                <input
-                  type="text"
-                  class="rp-alias-input"
-                  v-model="rp._editAlias"
-                  placeholder="别名"
-                  @click.stop
-                  @blur="updateAlias(rp)"
-                  @keyup.enter="$event.target.blur()"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -146,16 +192,21 @@ export default {
       if (!this.searchLeft) return this.availablePoints
       const q = this.searchLeft.toLowerCase()
       return this.availablePoints.filter(
-        (p) => p.point_code.toLowerCase().includes(q) || p.point_name.toLowerCase().includes(q),
+        (p) =>
+          p.point_code.toLowerCase().includes(q) ||
+          p.point_name.toLowerCase().includes(q) ||
+          (p.alias && p.alias.toLowerCase().includes(q)),
       )
     },
     filteredConfigured() {
-      if (!this.searchRight) return this.configuredPoints
+      const points = this.configuredPoints
+      if (!this.searchRight) return points
       const q = this.searchRight.toLowerCase()
-      return this.configuredPoints.filter(
+      return points.filter(
         (p) =>
           p.point_code.toLowerCase().includes(q) ||
-          (p._editAlias || '').toLowerCase().includes(q) ||
+          (this.getAliasFallback(p) || '').toLowerCase().includes(q) ||
+          (this.getPointNameFallback(p) || '').toLowerCase().includes(q) ||
           this.getDeviceName(p.device_id).toLowerCase().includes(q),
       )
     },
@@ -185,10 +236,27 @@ export default {
       if (!this.selectedDeviceId) return
       this.loadingPoints = true
       try {
-        const res = await this.$axios.get('/api/mqtt/available_points', {
+        const res = await this.$axios.get('/api/point_alias/list', {
           params: { device_id: this.selectedDeviceId },
         })
-        if (res && res.code === 200) this.availablePoints = res.data?.points || []
+        if (Array.isArray(res)) {
+          this.availablePoints = res.map((item) => ({
+            point_code: item.point_code,
+            point_name: item.point_name,
+            alias: item.alias,
+            device_id: item.device_id,
+          }))
+        } else if (res && res.code === 200) {
+          const data = res.data || res
+          this.availablePoints = Array.isArray(data)
+            ? data.map((item) => ({
+                point_code: item.point_code,
+                point_name: item.point_name,
+                alias: item.alias,
+                device_id: item.device_id,
+              }))
+            : []
+        }
       } catch (e) {
         console.error('加载可选点位失败:', e)
       } finally {
@@ -202,9 +270,13 @@ export default {
         const res = await this.$axios.get('/api/mqtt/report_points', {
           params: { scheme_id: this.schemeId },
         })
-        if (res && res.code === 200 && Array.isArray(res.data)) {
-          this.configuredPoints = res.data.map((p) => ({ ...p, _editAlias: p.report_alias || '' }))
+        let data = []
+        if (Array.isArray(res)) {
+          data = res
+        } else if (res && res.code === 200 && Array.isArray(res.data)) {
+          data = res.data
         }
+        this.configuredPoints = data.map((p) => ({ ...p }))
       } catch (e) {
         console.error('加载已配置点位失败:', e)
       } finally {
@@ -219,7 +291,9 @@ export default {
     },
 
     selectAllLeft() {
-      const selectable = this.filteredAvailable.filter((p) => !this.isAlreadyAdded(p.point_code)).map((p) => p.point_code)
+      const selectable = this.filteredAvailable
+        .filter((p) => !this.isAlreadyAdded(p.point_code))
+        .map((p) => p.point_code)
       if (this.leftSelected.length === selectable.length) {
         this.leftSelected = []
       } else {
@@ -240,11 +314,13 @@ export default {
     },
 
     selectAllRight() {
-      const all = this.filteredConfigured.map((p) => p.id)
-      if (this.rightSelected.length === all.length) {
+      const selectable = this.filteredConfigured
+        .filter((p) => !this.selectedDeviceId || p.device_id == this.selectedDeviceId)
+        .map((p) => p.id)
+      if (this.rightSelected.length === selectable.length) {
         this.rightSelected = []
       } else {
-        this.rightSelected = all
+        this.rightSelected = selectable
       }
     },
 
@@ -263,7 +339,8 @@ export default {
           points,
         })
         if (res && res.code === 200) {
-          this.$message && this.$message.success(`已添加 ${res.data?.success_count || points.length} 个点位`)
+          this.$message &&
+            this.$message.success(`已添加 ${res.data?.success_count || points.length} 个点位`)
           this.leftSelected = []
           await this.loadConfiguredPoints()
         }
@@ -283,7 +360,8 @@ export default {
           data: { ids: this.rightSelected },
         })
         if (res && res.code === 200) {
-          this.$message && this.$message.success(`已移除 ${res.data?.deleted || this.rightSelected.length} 个点位`)
+          this.$message &&
+            this.$message.success(`已移除 ${res.data?.deleted || this.rightSelected.length} 个点位`)
           this.rightSelected = []
           await this.loadConfiguredPoints()
         }
@@ -305,15 +383,20 @@ export default {
       }
     },
 
-    async updateAlias(rp) {
-      if (rp._editAlias === (rp.report_alias || '')) return
-      try {
-        await this.$axios.put('/api/mqtt/report_points', { id: rp.id, report_alias: rp._editAlias })
-        rp.report_alias = rp._editAlias
-      } catch (e) {
-        rp._editAlias = rp.report_alias || ''
-        this.$message && this.$message.error('更新别名失败')
-      }
+    getAliasFallback(rp) {
+      if (rp.report_alias) return rp.report_alias
+      const match = this.availablePoints.find(
+        (p) => p.device_id == rp.device_id && p.point_code === rp.point_code,
+      )
+      return match?.alias || ''
+    },
+
+    getPointNameFallback(rp) {
+      if (rp.point_name) return rp.point_name
+      const match = this.availablePoints.find(
+        (p) => p.device_id == rp.device_id && p.point_code === rp.point_code,
+      )
+      return match?.point_name || ''
     },
 
     getDeviceName(deviceId) {
@@ -325,7 +408,9 @@ export default {
 </script>
 
 <style scoped>
-.rp { width: 100%; }
+.rp {
+  width: 100%;
+}
 
 /* 设备选择栏 */
 .rp-device-bar {
@@ -354,7 +439,10 @@ export default {
   background: #fff;
 }
 
-.rp-device-bar select:focus { outline: none; border-color: #3498db; }
+.rp-device-bar select:focus {
+  outline: none;
+  border-color: #3498db;
+}
 
 /* 穿梭框 */
 .rp-transfer {
@@ -436,7 +524,10 @@ export default {
   color: #2c3e50;
 }
 
-.rp-search input:focus { outline: none; border-color: #3498db; }
+.rp-search input:focus {
+  outline: none;
+  border-color: #3498db;
+}
 
 .rp-panel-body {
   flex: 1;
@@ -458,10 +549,15 @@ export default {
   font-size: 13px;
 }
 
-.rp-placeholder i { font-size: 28px; color: #bdc3c7; }
+.rp-placeholder i {
+  font-size: 28px;
+  color: #bdc3c7;
+}
 
 /* 列表项 */
-.rp-list { padding: 4px 0; }
+.rp-list {
+  padding: 4px 0;
+}
 
 .rp-item {
   display: flex;
@@ -473,18 +569,38 @@ export default {
   border-bottom: 1px solid #f8f9fa;
 }
 
-.rp-item:hover { background: #f0f7ff; }
-.rp-item.selected { background: #e8f4fd; }
-.rp-item.added { opacity: 0.4; cursor: default; }
+.rp-item:hover {
+  background: #f0f7ff;
+}
+.rp-item.selected {
+  background: #e8f4fd;
+}
+.rp-item.added {
+  opacity: 0.4;
+  cursor: default;
+}
 
-.rp-item input[type="checkbox"] { flex-shrink: 0; cursor: pointer; }
+.rp-item.disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.rp-item input[type='checkbox'] {
+  flex-shrink: 0;
+  cursor: pointer;
+}
 
 .rp-item-info {
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.rp-item-info-right {
+  justify-content: space-between;
 }
 
 .rp-item-code {
@@ -494,9 +610,15 @@ export default {
   font-family: 'Menlo', 'Monaco', monospace;
 }
 
-.rp-item-name, .rp-item-device {
-  font-size: 11px;
+.rp-item-name,
+.rp-item-device,
+.rp-item-alias {
+  font-size: 12px;
   color: #7f8c8d;
+}
+
+.rp-item-alias {
+  color: #5d6d7e;
 }
 
 .rp-added-tag {
@@ -509,7 +631,9 @@ export default {
 }
 
 /* 右侧项额外样式 */
-.rp-item-right { gap: 6px; }
+.rp-item-right {
+  gap: 6px;
+}
 
 .rp-alias-input {
   width: 80px;
@@ -521,7 +645,10 @@ export default {
   flex-shrink: 0;
 }
 
-.rp-alias-input:focus { outline: none; border-color: #3498db; }
+.rp-alias-input:focus {
+  outline: none;
+  border-color: #3498db;
+}
 
 .rp-status-tag {
   font-size: 11px;
@@ -533,9 +660,17 @@ export default {
   user-select: none;
 }
 
-.rp-status-tag.on { background: #d4edda; color: #155724; }
-.rp-status-tag.off { background: #f8d7da; color: #721c24; }
-.rp-status-tag:hover { opacity: 0.7; }
+.rp-status-tag.on {
+  background: #d4edda;
+  color: #155724;
+}
+.rp-status-tag.off {
+  background: #f8d7da;
+  color: #721c24;
+}
+.rp-status-tag:hover {
+  opacity: 0.7;
+}
 
 /* 中间操作按钮 */
 .rp-actions {
@@ -567,18 +702,38 @@ export default {
   border-color: #3498db;
 }
 
-.rp-btn-transfer:disabled { opacity: 0.35; cursor: not-allowed; }
+.rp-btn-transfer:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
 
 /* 滚动条 */
-.rp-panel-body::-webkit-scrollbar { width: 5px; }
-.rp-panel-body::-webkit-scrollbar-track { background: #f1f1f1; }
-.rp-panel-body::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+.rp-panel-body::-webkit-scrollbar {
+  width: 5px;
+}
+.rp-panel-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+.rp-panel-body::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
 
 /* 响应式 */
 @media (max-width: 768px) {
-  .rp-dialog { width: 98%; max-height: 95vh; }
-  .rp-transfer { flex-direction: column; }
-  .rp-actions { flex-direction: row; justify-content: center; }
-  .rp-alias-input { width: 60px; }
+  .rp-dialog {
+    width: 98%;
+    max-height: 95vh;
+  }
+  .rp-transfer {
+    flex-direction: column;
+  }
+  .rp-actions {
+    flex-direction: row;
+    justify-content: center;
+  }
+  .rp-alias-input {
+    width: 60px;
+  }
 }
 </style>
