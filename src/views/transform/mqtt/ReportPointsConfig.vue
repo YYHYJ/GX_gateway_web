@@ -185,9 +185,20 @@ export default {
       loadingPoints: false,
       loadingConfig: false,
       submitting: false,
+      selectedDeviceConfiguredCodesCache: null, // ✅ 性能优化：缓存当前选中设备已配置点位 code 的 Set
     }
   },
   computed: {
+    // ✅ 性能优化：将 availablePoints 转换为 Map，提高查找效率
+    pointsMap() {
+      const map = new Map()
+      this.availablePoints.forEach((p) => {
+        const key = `${p.device_id}_${p.point_code}`
+        map.set(key, p)
+      })
+      return map
+    },
+
     filteredAvailable() {
       if (!this.searchLeft) return this.availablePoints
       const q = this.searchLeft.toLowerCase()
@@ -257,11 +268,36 @@ export default {
               }))
             : []
         }
+        
+        // ✅ 性能优化：清除缓存的 Set，下次使用时重新构建
+        this.configuredPointCodesCache = null
+        
+        // ✅ 性能优化：加载完 availablePoints 后，补充已配置点位的详细信息
+        this.enrichConfiguredPointsDetails()
       } catch (e) {
         console.error('加载可选点位失败:', e)
       } finally {
         this.loadingPoints = false
       }
+    },
+
+    // ✅ 新增方法：补充已配置点位的详细信息
+    enrichConfiguredPointsDetails() {
+      if (!this.configuredPoints.length || !this.availablePoints.length) return
+      
+      this.configuredPoints.forEach((rp) => {
+        // 只补充当前选中设备的点位信息
+        if (rp.device_id != this.selectedDeviceId) return
+        
+        const key = `${rp.device_id}_${rp.point_code}`
+        const pointDetail = this.pointsMap.get(key)
+        
+        if (pointDetail) {
+          // 只有当后端未返回时才补充
+          if (!rp.point_name) rp.point_name = pointDetail.point_name || ''
+          if (!rp.report_alias) rp.report_alias = pointDetail.alias || ''
+        }
+      })
     },
 
     async loadConfiguredPoints() {
@@ -276,7 +312,12 @@ export default {
         } else if (res && res.code === 200 && Array.isArray(res.data)) {
           data = res.data
         }
+        
+        // ✅ 性能优化：直接使用后端返回的数据，详细信息在加载 availablePoints 后补充
         this.configuredPoints = data.map((p) => ({ ...p }))
+        
+        // ✅ 性能优化：清除缓存的 Set，下次使用时重新构建
+        this.configuredPointCodesCache = null
       } catch (e) {
         console.error('加载已配置点位失败:', e)
       } finally {
@@ -291,9 +332,17 @@ export default {
     },
 
     selectAllLeft() {
+      // ✅ 性能优化：使用 Set 提高查找效率，避免重复遍历
+      const configuredSet = new Set(
+        this.configuredPoints
+          .filter((p) => p.device_id == this.selectedDeviceId)
+          .map((p) => p.point_code),
+      )
+
       const selectable = this.filteredAvailable
-        .filter((p) => !this.isAlreadyAdded(p.point_code))
+        .filter((p) => !configuredSet.has(p.point_code))
         .map((p) => p.point_code)
+
       if (this.leftSelected.length === selectable.length) {
         this.leftSelected = []
       } else {
@@ -302,9 +351,15 @@ export default {
     },
 
     isAlreadyAdded(pointCode) {
-      return this.configuredPoints.some(
-        (p) => p.device_id == this.selectedDeviceId && p.point_code === pointCode,
-      )
+      // ✅ 性能优化：使用 Set 替代数组 some() 遍历
+      if (!this.configuredPointCodesCache) {
+        this.configuredPointCodesCache = new Set(
+          this.configuredPoints
+            .filter((p) => p.device_id == this.selectedDeviceId)
+            .map((p) => p.point_code),
+        )
+      }
+      return this.configuredPointCodesCache.has(pointCode)
     },
 
     // ========== 右侧选择 ==========
@@ -329,11 +384,17 @@ export default {
       if (this.leftSelected.length === 0 || !this.selectedDeviceId) return
       this.submitting = true
       try {
-        const points = this.leftSelected.map((code) => ({
-          device_id: Number(this.selectedDeviceId),
-          point_code: code,
-          report_alias: '',
-        }))
+        // ✅ 性能优化：使用 Map 快速查找点位信息，避免遍历数组
+        const points = this.leftSelected.map((code) => {
+          const key = `${this.selectedDeviceId}_${code}`
+          const point = this.pointsMap.get(key)
+          const alias = point?.alias || code // 优先使用alias，如果没有则使用point_code
+          return {
+            device_id: Number(this.selectedDeviceId),
+            point_code: alias, // 使用alias作为point_code的值
+            report_alias: alias, // 使用alias作为report_alias的值
+          }
+        })
         const res = await this.$axios.post('/api/mqtt/report_points', {
           scheme_id: Number(this.schemeId),
           points,
@@ -384,19 +445,13 @@ export default {
     },
 
     getAliasFallback(rp) {
-      if (rp.report_alias) return rp.report_alias
-      const match = this.availablePoints.find(
-        (p) => p.device_id == rp.device_id && p.point_code === rp.point_code,
-      )
-      return match?.alias || ''
+      // ✅ 性能优化：直接返回预计算的字段，无需查找
+      return rp.report_alias || ''
     },
 
     getPointNameFallback(rp) {
-      if (rp.point_name) return rp.point_name
-      const match = this.availablePoints.find(
-        (p) => p.device_id == rp.device_id && p.point_code === rp.point_code,
-      )
-      return match?.point_name || ''
+      // ✅ 性能优化：直接返回预计算的字段，无需查找
+      return rp.point_name || ''
     },
 
     getDeviceName(deviceId) {
@@ -576,8 +631,23 @@ export default {
   background: #e8f4fd;
 }
 .rp-item.added {
-  opacity: 0.4;
-  cursor: default;
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #f5f5f5;
+}
+
+.rp-item.added:hover {
+  background-color: #f5f5f5;
+}
+
+.rp-item.added .rp-item-code,
+.rp-item.added .rp-item-name,
+.rp-item.added .rp-item-alias {
+  color: #999;
+}
+
+.rp-item.added input[type='checkbox'] {
+  cursor: not-allowed;
 }
 
 .rp-item.disabled {

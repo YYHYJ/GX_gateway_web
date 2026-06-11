@@ -1552,7 +1552,26 @@ export default {
       const fnB = Number(b.functionCode) || 0
       if (fnA !== fnB) return fnA - fnB
       if (a.address !== b.address) return a.address - b.address
+
+      // 同一地址下，尝试从data_type提取bit序号进行数字排序
+      const bitA = this.extractBitIndex(a.dataType)
+      const bitB = this.extractBitIndex(b.dataType)
+
+      // 如果都是bit类型，按bit序号排序
+      if (bitA !== null && bitB !== null) {
+        return bitA - bitB
+      }
+
+      // 否则按点位代码字符串排序
       return String(a.pointCode || '').localeCompare(String(b.pointCode || ''))
+    },
+
+    // 从data_type中提取bit序号（如bit0, bit1, bit10）
+    extractBitIndex(dataType) {
+      if (!dataType) return null
+      // 匹配类似 bit0, bit1, bit10 等格式
+      const match = String(dataType).match(/bit(\d+)$/i)
+      return match ? parseInt(match[1], 10) : null
     },
 
     // 切换分组展开/折叠状态

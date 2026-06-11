@@ -281,12 +281,17 @@ export default {
           params: { scheme_id: this.schemeId },
         })
         if (res && res.code === 200 && Array.isArray(res.data)) {
-          // 为每个点位加载alias信息
           const points = res.data
-          for (const point of points) {
+
+          // 收集所有唯一的device_id
+          const deviceIds = [...new Set(points.map((p) => p.device_id))]
+
+          // 批量获取所有设备的别名数据
+          const aliasMap = {} // { device_id: [alias_data] }
+          for (const deviceId of deviceIds) {
             try {
               const aliasRes = await this.$axios.get('/api/point_alias/list', {
-                params: { device_id: point.device_id },
+                params: { device_id: deviceId },
               })
               let aliasData = []
               if (Array.isArray(aliasRes)) {
@@ -294,15 +299,21 @@ export default {
               } else if (aliasRes && aliasRes.code === 200) {
                 aliasData = aliasRes.data || aliasRes
               }
-              // 找到匹配的点位的alias
-              const match = aliasData.find((a) => a.point_code === point.point_code)
-              if (match) {
-                point.alias = match.alias
-              }
+              aliasMap[deviceId] = aliasData
             } catch (e) {
-              console.error(`加载点位${point.point_code}的alias失败:`, e)
+              console.error(`加载设备${deviceId}的alias失败:`, e)
             }
           }
+
+          // 为每个点位匹配alias
+          points.forEach((point) => {
+            const aliasData = aliasMap[point.device_id] || []
+            const match = aliasData.find((a) => a.point_code === point.point_code)
+            if (match) {
+              point.alias = match.alias
+            }
+          })
+
           this.reportPoints = points
         }
       } catch (e) {
