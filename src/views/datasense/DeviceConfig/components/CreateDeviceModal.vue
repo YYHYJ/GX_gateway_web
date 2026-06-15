@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="modal-overlay" @click.self="handleClose">
+  <div v-if="visible" class="modal-overlay">
     <div class="modal-container">
       <!-- 模态框头部 -->
       <div class="modal-header">

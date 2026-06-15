@@ -30,13 +30,6 @@
           >
             <i class="fas fa-inbox fa-3x" style="margin-bottom: 20px; color: #ddd"></i>
             <p>暂无设备</p>
-            <button
-              class="btn btn-primary"
-              @click="handleAddDeviceInstance"
-              style="margin-top: 10px"
-            >
-              <i class="fas fa-plus"></i> 添加设备
-            </button>
           </div>
 
           <!-- 数据表格 -->
@@ -75,8 +68,8 @@
                   <td>
                     <div class="toggle-switch-container">
                       <label class="toggle-switch">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           :checked="instance.isEnabled"
                           @change="handleToggleEnabled(instance)"
                           :disabled="togglingDevices.has(instance.id)"
@@ -84,7 +77,13 @@
                         <span class="toggle-slider"></span>
                       </label>
                       <span class="toggle-text">
-                        {{ togglingDevices.has(instance.id) ? '切换中...' : (instance.isEnabled ? '已启用' : '已禁用') }}
+                        {{
+                          togglingDevices.has(instance.id)
+                            ? '切换中...'
+                            : instance.isEnabled
+                              ? '已启用'
+                              : '已禁用'
+                        }}
                       </span>
                     </div>
                   </td>
@@ -299,8 +298,8 @@ export default {
       try {
         const res = await deviceService.getDeviceStatus()
         if (res.code === 200 && Array.isArray(res.data)) {
-          const statusMap = new Map(res.data.map(s => [s.device_id, s]))
-          this.instances.forEach(inst => {
+          const statusMap = new Map(res.data.map((s) => [s.device_id, s]))
+          this.instances.forEach((inst) => {
             const s = statusMap.get(inst.id)
             if (s) {
               inst.status = deviceStatus.resolveStatus(s.conn_status)
@@ -410,8 +409,9 @@ export default {
     handleToggleEnabled(instance) {
       const { id, isEnabled } = instance
       this.togglingDevices.add(id)
-      
-      deviceService.toggleDeviceEnabled(id, !isEnabled)
+
+      deviceService
+        .toggleDeviceEnabled(id, !isEnabled)
         .then(() => {
           // 重新获取设备列表，确保数据完全同步
           this.fetchDeviceInstances()
@@ -607,7 +607,7 @@ export default {
 
 .toggle-slider:before {
   position: absolute;
-  content: "";
+  content: '';
   height: 16px;
   width: 16px;
   left: 2px;

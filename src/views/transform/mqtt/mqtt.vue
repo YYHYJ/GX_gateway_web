@@ -23,10 +23,7 @@
           @connections-error="handleConnectionsError"
         />
 
-        <!-- 2. 上报方案管理 -->
-        <SchemeManager @schemes-changed="onSchemesChanged" />
-
-        <!-- 3. 配置区域（新增或编辑） -->
+        <!-- 2. 配置区域(新增或编辑) -->
         <div v-if="isEditing || isCreating" class="config-area">
           <!-- 配置标题 -->
           <div class="config-header">
@@ -158,9 +155,12 @@
           <div class="empty-state">
             <i class="fas fa-plug"></i>
             <h4>请选择一个MQTT连接进行配置</h4>
-            <p>从上方列表中选择一个连接进行编辑，或者点击「添加连接」创建新的连接</p>
+            <p>从上方列表中选择一个连接进行编辑,或者点击「添加连接」创建新的连接</p>
           </div>
         </div>
+
+        <!-- 3. 上报方案管理 -->
+        <SchemeManager @schemes-changed="onSchemesChanged" />
       </div>
     </div>
   </MainLayout>

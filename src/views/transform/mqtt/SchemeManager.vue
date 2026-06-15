@@ -134,7 +134,12 @@ export default {
       activeTab: 'points',
       showDialog: false,
       editingScheme: null,
-      form: { scheme_name: '', publish_interval: 5000, description: '', template_json: null },
+      form: {
+        scheme_name: '',
+        publish_interval: 5000,
+        description: '',
+        template_json: null,
+      },
       useMockMode: false,
       mockSchemes: [
         {
@@ -203,7 +208,12 @@ export default {
 
     showCreate() {
       this.editingScheme = null
-      this.form = { scheme_name: '', publish_interval: 5000, description: '', template_json: null }
+      this.form = {
+        scheme_name: '',
+        publish_interval: 5000,
+        description: '',
+        template_json: null,
+      }
       this.showDialog = true
     },
 

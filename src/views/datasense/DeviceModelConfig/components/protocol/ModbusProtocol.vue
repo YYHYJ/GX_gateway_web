@@ -31,10 +31,6 @@
           <option value="2">02 - 遥信</option>
           <option value="3">03 - 遥测</option>
           <option value="4">04 - 遥测</option>
-          <option value="5">05 - 遥控</option>
-          <option value="6">06 - 遥调</option>
-          <option value="15">15 - 遥控</option>
-          <option value="16">16 - 遥调</option>
         </select>
 
         <select v-model="filters.dataType" class="filter-select" @change="loadPoints">
@@ -65,7 +61,12 @@
           <button class="btn btn-outline" @click="importPoints">
             <i class="fas fa-upload"></i> 导入点表
           </button>
-          <button class="btn btn-outline" @click="exportPoints">
+          <button
+            class="btn btn-outline"
+            @click="exportPoints"
+            :disabled="filteredPoints.length === 0"
+            :title="filteredPoints.length === 0 ? '暂无点位数据，无法导出' : '导出点表'"
+          >
             <i class="fas fa-download"></i> 导出点表
           </button>
         </div>
@@ -103,10 +104,7 @@
       <div v-else-if="points.length === 0 && !hasSearchFilter" class="empty-state">
         <i class="fas fa-database"></i>
         <h3>暂无点位数据</h3>
-        <p>还没有配置任何点位，点击"新增点位"开始配置</p>
-        <button class="btn btn-primary" @click="showAddPointDialog">
-          <i class="fas fa-plus"></i> 新增点位
-        </button>
+        <p>还没有配置任何点位，请点击上方"新增点位"开始配置</p>
       </div>
 
       <!-- 点位列表 -->
@@ -123,7 +121,7 @@
                 <th>状态</th>
                 <th>地址</th>
                 <th>可控</th>
-                <th>功能码</th>
+                <th>读功能码</th>
                 <th>数据类型</th>
                 <th>缩放因子</th>
                 <th>偏移量</th>
@@ -253,7 +251,23 @@
                   </td>
 
                   <!-- 可控：点击切换 -->
-                  <td @click="toggleField(point, 'isControl')">
+                  <td
+                    @click="
+                      point.functionCode !== 2 && point.functionCode !== 4
+                        ? toggleField(point, 'isControl')
+                        : null
+                    "
+                    :title="
+                      point.functionCode === 2 || point.functionCode === 4
+                        ? '02/04功能码对应只读寄存器，不可设置为可控'
+                        : ''
+                    "
+                    :style="
+                      point.functionCode === 2 || point.functionCode === 4
+                        ? { cursor: 'not-allowed', opacity: 0.6 }
+                        : {}
+                    "
+                  >
                     <span
                       class="control-badge toggle-badge"
                       :class="point.isControl === 1 ? 'control-enabled' : 'control-disabled'"
@@ -276,16 +290,28 @@
                       <option :value="2">02 - 遥信</option>
                       <option :value="3">03 - 遥测</option>
                       <option :value="4">04 - 遥测</option>
-                      <option :value="5">05 - 遥控</option>
-                      <option :value="6">06 - 遥调</option>
-                      <option :value="15">15 - 遥控</option>
-                      <option :value="16">16 - 遥调</option>
                     </select>
                     <div v-else class="cell-editable">{{ point.functionCode }}</div>
                   </td>
 
                   <!-- 数据类型：下拉选择 -->
-                  <td @click="startInlineEdit(point, 'dataType')">
+                  <td
+                    @click="
+                      point.functionCode !== 1 && point.functionCode !== 2
+                        ? startInlineEdit(point, 'dataType')
+                        : null
+                    "
+                    :title="
+                      point.functionCode === 1 || point.functionCode === 2
+                        ? '01/02功能码只能使用boolean类型'
+                        : ''
+                    "
+                    :style="
+                      point.functionCode === 1 || point.functionCode === 2
+                        ? { cursor: 'not-allowed', opacity: 0.6 }
+                        : {}
+                    "
+                  >
                     <select
                       v-if="isEditing(point, 'dataType')"
                       v-model="inlineEditValue"
@@ -302,7 +328,23 @@
                   </td>
 
                   <!-- 缩放因子：数字输入 -->
-                  <td @click="startInlineEdit(point, 'scaleFactor')">
+                  <td
+                    @click="
+                      point.functionCode !== 1 && point.functionCode !== 2
+                        ? startInlineEdit(point, 'scaleFactor')
+                        : null
+                    "
+                    :title="
+                      point.functionCode === 1 || point.functionCode === 2
+                        ? '01/02功能码缩放因子必须为1'
+                        : ''
+                    "
+                    :style="
+                      point.functionCode === 1 || point.functionCode === 2
+                        ? { cursor: 'not-allowed', opacity: 0.6 }
+                        : {}
+                    "
+                  >
                     <input
                       v-if="isEditing(point, 'scaleFactor')"
                       v-model.number="inlineEditValue"
@@ -318,7 +360,23 @@
                   </td>
 
                   <!-- 偏移量：数字输入 -->
-                  <td @click="startInlineEdit(point, 'offset')">
+                  <td
+                    @click="
+                      point.functionCode !== 1 && point.functionCode !== 2
+                        ? startInlineEdit(point, 'offset')
+                        : null
+                    "
+                    :title="
+                      point.functionCode === 1 || point.functionCode === 2
+                        ? '01/02功能码偏移量必须为0'
+                        : ''
+                    "
+                    :style="
+                      point.functionCode === 1 || point.functionCode === 2
+                        ? { cursor: 'not-allowed', opacity: 0.6 }
+                        : {}
+                    "
+                  >
                     <input
                       v-if="isEditing(point, 'offset')"
                       v-model.number="inlineEditValue"
@@ -349,16 +407,44 @@
 
                   <!-- 精度：上下按钮整数切换 -->
                   <td>
-                    <div class="precision-stepper">
+                    <div
+                      class="precision-stepper"
+                      :style="
+                        point.functionCode === 1 || point.functionCode === 2 ? { opacity: 0.6 } : {}
+                      "
+                      :title="
+                        point.functionCode === 1 || point.functionCode === 2
+                          ? '01/02功能码精度必须为0'
+                          : ''
+                      "
+                    >
                       <button
                         class="stepper-btn"
-                        @click="stepPrecision(point, -1)"
-                        :disabled="point.precision <= 0"
+                        @click="
+                          point.functionCode !== 1 && point.functionCode !== 2
+                            ? stepPrecision(point, -1)
+                            : null
+                        "
+                        :disabled="
+                          point.precision <= 0 ||
+                          point.functionCode === 1 ||
+                          point.functionCode === 2
+                        "
                       >
                         −
                       </button>
                       <span class="stepper-value">{{ point.precision }}</span>
-                      <button class="stepper-btn" @click="stepPrecision(point, 1)">+</button>
+                      <button
+                        class="stepper-btn"
+                        @click="
+                          point.functionCode !== 1 && point.functionCode !== 2
+                            ? stepPrecision(point, 1)
+                            : null
+                        "
+                        :disabled="point.functionCode === 1 || point.functionCode === 2"
+                      >
+                        +
+                      </button>
                     </div>
                   </td>
 
@@ -587,7 +673,7 @@
     </div>
 
     <!-- 添加/编辑点位对话框 -->
-    <div v-if="showDialog" class="dialog-overlay" @click.self="closeDialog">
+    <div v-if="showDialog" class="dialog-overlay">
       <div class="dialog-content">
         <div class="dialog-header">
           <h3>{{ editingPoint ? '编辑点位' : '新增点位' }}</h3>
@@ -618,27 +704,39 @@
             </div>
             <div class="form-group">
               <label>可控</label>
-              <select v-model="pointForm.isControl">
+              <select
+                v-model="pointForm.isControl"
+                :disabled="pointForm.functionCode === 2 || pointForm.functionCode === 4"
+                :title="
+                  pointForm.functionCode === 2 || pointForm.functionCode === 4
+                    ? '02/04功能码对应只读寄存器，不可设置为可控'
+                    : ''
+                "
+              >
                 <option :value="0">不可控</option>
                 <option :value="1">可控</option>
               </select>
             </div>
             <div class="form-group">
-              <label><span class="required">*</span>功能码</label>
+              <label><span class="required">*</span>读功能码</label>
               <select v-model="pointForm.functionCode">
                 <option :value="1">01 - 遥信</option>
                 <option :value="2">02 - 遥信</option>
                 <option :value="3">03 - 遥测</option>
                 <option :value="4">04 - 遥测</option>
-                <option :value="5">05 - 遥控</option>
-                <option :value="6">06 - 遥调</option>
-                <option :value="15">15 - 遥控</option>
-                <option :value="16">16 - 遥调</option>
               </select>
             </div>
             <div class="form-group">
               <label><span class="required">*</span>数据类型</label>
-              <select v-model="pointForm.dataType">
+              <select
+                v-model="pointForm.dataType"
+                :disabled="pointForm.functionCode === 1 || pointForm.functionCode === 2"
+                :title="
+                  pointForm.functionCode === 1 || pointForm.functionCode === 2
+                    ? '01/02功能码只能使用BOOL或BIT类型'
+                    : ''
+                "
+              >
                 <option v-for="type in dataTypeOptions" :key="type.value" :value="type.value">
                   {{ type.label }}
                 </option>
@@ -651,11 +749,27 @@
                 v-model.number="pointForm.scaleFactor"
                 step="0.01"
                 placeholder="1"
+                :disabled="pointForm.functionCode === 1 || pointForm.functionCode === 2"
+                :title="
+                  pointForm.functionCode === 1 || pointForm.functionCode === 2
+                    ? '01/02功能码缩放因子必须为1'
+                    : ''
+                "
               />
             </div>
             <div class="form-group">
               <label>偏移量</label>
-              <input type="number" v-model.number="pointForm.offset" placeholder="0" />
+              <input
+                type="number"
+                v-model.number="pointForm.offset"
+                placeholder="0"
+                :disabled="pointForm.functionCode === 1 || pointForm.functionCode === 2"
+                :title="
+                  pointForm.functionCode === 1 || pointForm.functionCode === 2
+                    ? '01/02功能码偏移量必须为0'
+                    : ''
+                "
+              />
             </div>
             <div class="form-group">
               <label>工程单位</label>
@@ -663,7 +777,17 @@
             </div>
             <div class="form-group">
               <label>精度</label>
-              <input type="number" v-model.number="pointForm.precision" placeholder="1" />
+              <input
+                type="number"
+                v-model.number="pointForm.precision"
+                placeholder="1"
+                :disabled="pointForm.functionCode === 1 || pointForm.functionCode === 2"
+                :title="
+                  pointForm.functionCode === 1 || pointForm.functionCode === 2
+                    ? '01/02功能码精度必须为0'
+                    : ''
+                "
+              />
             </div>
             <div class="form-group">
               <label>字节序</label>
@@ -738,7 +862,7 @@
     </div>
 
     <!-- 新增点位组对话框 -->
-    <div v-if="showGroupDialog" class="dialog-overlay" @click.self="handleOverlayClick">
+    <div v-if="showGroupDialog" class="dialog-overlay">
       <div class="dialog-content dialog-large">
         <div class="dialog-header">
           <h3>新增点位组</h3>
@@ -753,60 +877,69 @@
               <h4 class="form-section-title">点位组配置</h4>
               <div class="form-grid">
                 <div class="form-group">
-                  <label class="required">组员数量</label>
+                  <label><span class="required">*</span>组员数量</label>
                   <input
                     type="number"
                     v-model.number="pointGroupForm.memberCount"
                     class="form-control"
                     min="1"
                     max="500"
-                    required
                     placeholder="例如: 5"
                     @change="updateAddressInterval"
                   />
                 </div>
                 <div class="form-group">
-                  <label class="required">基础点位代码</label>
+                  <label><span class="required">*</span>基础点位代码</label>
                   <input
                     type="text"
                     v-model="pointGroupForm.basePointCode"
                     class="form-control"
-                    required
                     placeholder="例如: TEMP"
                   />
                 </div>
                 <div class="form-group">
-                  <label class="required">基础点位名称</label>
+                  <label><span class="required">*</span>基础点位名称</label>
                   <input
                     type="text"
                     v-model="pointGroupForm.basePointName"
                     class="form-control"
-                    required
                     placeholder="例如: 温度"
                   />
                 </div>
                 <div class="form-group">
-                  <label class="required">起始地址</label>
+                  <label><span class="required">*</span>起始地址</label>
                   <input
                     type="number"
                     v-model.number="pointGroupForm.startAddress"
                     class="form-control"
                     min="1"
                     max="65535"
-                    required
                     placeholder="例如: 10000"
                   />
                 </div>
                 <div class="form-group">
-                  <label class="required">状态</label>
-                  <select v-model="pointGroupForm.status" class="form-control" required>
+                  <label><span class="required">*</span>状态</label>
+                  <select v-model="pointGroupForm.status" class="form-control">
                     <option :value="1">启用</option>
                     <option :value="0">停用</option>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="required">可控</label>
-                  <select v-model="pointGroupForm.isControl" class="form-control" required>
+                  <label><span class="required">*</span>可控</label>
+                  <select
+                    v-model="pointGroupForm.isControl"
+                    class="form-control"
+                    :disabled="
+                      Number(pointGroupForm.functionCode) === 2 ||
+                      Number(pointGroupForm.functionCode) === 4
+                    "
+                    :title="
+                      Number(pointGroupForm.functionCode) === 2 ||
+                      Number(pointGroupForm.functionCode) === 4
+                        ? '02/04功能码对应只读寄存器，不可设置为可控'
+                        : ''
+                    "
+                  >
                     <option :value="1">可控</option>
                     <option :value="0">不可控</option>
                   </select>
@@ -819,30 +952,34 @@
               <h4 class="form-section-title">Modbus配置</h4>
               <div class="form-grid">
                 <div class="form-group">
-                  <label class="required">功能码</label>
+                  <label><span class="required">*</span>读功能码</label>
                   <select
                     v-model="pointGroupForm.functionCode"
                     class="form-control"
-                    required
                     @change="onFunctionCodeChange"
                   >
                     <option value="1">01 - 读线圈</option>
                     <option value="2">02 - 读离散输入</option>
                     <option value="3">03 - 读保持寄存器</option>
                     <option value="4" selected>04 - 读输入寄存器</option>
-                    <option value="5">05 - 写单个线圈</option>
-                    <option value="6">06 - 写单个寄存器</option>
-                    <option value="15">15 - 写多个线圈</option>
-                    <option value="16">16 - 写多个寄存器</option>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="required">数据类型</label>
+                  <label><span class="required">*</span>数据类型</label>
                   <select
                     v-model="pointGroupForm.dataType"
                     class="form-control"
-                    required
                     @change="onDataTypeChange"
+                    :disabled="
+                      Number(pointGroupForm.functionCode) === 1 ||
+                      Number(pointGroupForm.functionCode) === 2
+                    "
+                    :title="
+                      Number(pointGroupForm.functionCode) === 1 ||
+                      Number(pointGroupForm.functionCode) === 2
+                        ? '01/02功能码只能使用boolean类型'
+                        : ''
+                    "
                   >
                     <option v-for="type in dataTypeOptions" :key="type.value" :value="type.value">
                       {{ type.label }}
@@ -875,6 +1012,16 @@
                     class="form-control"
                     step="0.001"
                     placeholder="1.0"
+                    :disabled="
+                      Number(pointGroupForm.functionCode) === 1 ||
+                      Number(pointGroupForm.functionCode) === 2
+                    "
+                    :title="
+                      Number(pointGroupForm.functionCode) === 1 ||
+                      Number(pointGroupForm.functionCode) === 2
+                        ? '01/02功能码缩放因子必须为1'
+                        : ''
+                    "
                   />
                 </div>
                 <div class="form-group">
@@ -885,6 +1032,16 @@
                     class="form-control"
                     step="0.001"
                     placeholder="0.0"
+                    :disabled="
+                      Number(pointGroupForm.functionCode) === 1 ||
+                      Number(pointGroupForm.functionCode) === 2
+                    "
+                    :title="
+                      Number(pointGroupForm.functionCode) === 1 ||
+                      Number(pointGroupForm.functionCode) === 2
+                        ? '01/02功能码偏移量必须为0'
+                        : ''
+                    "
                   />
                 </div>
                 <div class="form-group">
@@ -912,6 +1069,16 @@
                     min="0"
                     max="6"
                     placeholder="2"
+                    :disabled="
+                      Number(pointGroupForm.functionCode) === 1 ||
+                      Number(pointGroupForm.functionCode) === 2
+                    "
+                    :title="
+                      Number(pointGroupForm.functionCode) === 1 ||
+                      Number(pointGroupForm.functionCode) === 2
+                        ? '01/02功能码精度必须为0'
+                        : ''
+                    "
                   />
                 </div>
                 <div class="form-group">
@@ -1544,6 +1711,51 @@ export default {
     window.removeEventListener('resize', this.calcTableHeight)
   },
 
+  watch: {
+    // ✅ 监听功能码变化，如果是02或04，自动将可控设置为0
+    'pointForm.functionCode'(newVal) {
+      if (newVal === 2 || newVal === 4) {
+        this.pointForm.isControl = 0
+      }
+
+      // ✅ 如果是01或02，自动设置数据类型为boolean（如果当前不是位类型），缩放因子=1，偏移量=0，精度=0
+      if (newVal === 1 || newVal === 2) {
+        // 如果当前数据类型不是位类型(boolean/bit/bit0-bit15)，则重置为boolean
+        const isBitType =
+          this.pointForm.dataType === 'boolean' ||
+          this.pointForm.dataType === 'bit' ||
+          (typeof this.pointForm.dataType === 'string' && this.pointForm.dataType.startsWith('bit'))
+        if (!isBitType) {
+          this.pointForm.dataType = 'boolean'
+        }
+        this.pointForm.scaleFactor = 1
+        this.pointForm.offset = 0
+        this.pointForm.precision = 0
+      }
+    },
+    'pointGroupForm.functionCode'(newVal) {
+      const code = Number(newVal)
+      if (code === 2 || code === 4) {
+        this.pointGroupForm.isControl = 0
+      }
+
+      // ✅ 如果是01或02，自动设置数据类型为boolean（如果当前不是位类型），缩放因子=1，偏移量=0，精度=0
+      if (code === 1 || code === 2) {
+        // 如果当前数据类型不是位类型(boolean/bit/bit0-bit15)，则重置为boolean
+        const isBitType =
+          this.pointGroupForm.dataType === 'boolean' ||
+          this.pointGroupForm.dataType === 'bit' ||
+          (typeof this.pointGroupForm.dataType === 'string' &&
+            this.pointGroupForm.dataType.startsWith('bit'))
+        if (!isBitType) {
+          this.pointGroupForm.dataType = 'boolean'
+        }
+        this.pointGroupForm.scaleFactor = 1.0
+        this.pointGroupForm.offset = 0.0
+        this.pointGroupForm.precision = 0
+      }
+    },
+  },
   methods: {
     formatDataType,
 
@@ -2313,12 +2525,20 @@ export default {
         } else {
           point[field] = oldVal
           this.updatePointLocalState(point.id, field, oldVal)
-          this.$message.error(response.data?.message || '更新失败')
+          // ✅ 优先显示后端返回的具体错误信息
+          const errorMsg = response.data?.data?.error || response.data?.message || '更新失败'
+          this.$message.error(errorMsg)
         }
       } catch (err) {
         point[field] = oldVal
         this.updatePointLocalState(point.id, field, oldVal)
-        this.$message.error('更新失败: ' + (err.response?.data?.message || err.message))
+        // ✅ 优先显示后端返回的具体错误信息
+        const errorMsg =
+          err.response?.data?.data?.error ||
+          err.response?.data?.message ||
+          err.message ||
+          '更新失败'
+        this.$message.error(errorMsg)
       }
     },
 
@@ -2335,12 +2555,20 @@ export default {
         } else {
           point[field] = oldVal
           this.updatePointLocalState(point.id, field, oldVal)
-          this.$message.error(response.data?.message || '更新失败')
+          // ✅ 优先显示后端返回的具体错误信息
+          const errorMsg = response.data?.data?.error || response.data?.message || '更新失败'
+          this.$message.error(errorMsg)
         }
       } catch (err) {
         point[field] = oldVal
         this.updatePointLocalState(point.id, field, oldVal)
-        this.$message.error('更新失败: ' + (err.response?.data?.message || err.message))
+        // ✅ 优先显示后端返回的具体错误信息
+        const errorMsg =
+          err.response?.data?.data?.error ||
+          err.response?.data?.message ||
+          err.message ||
+          '更新失败'
+        this.$message.error(errorMsg)
       }
     },
 
@@ -2359,12 +2587,20 @@ export default {
         } else {
           point.precision = oldVal
           this.updatePointLocalState(point.id, 'precision', oldVal)
-          this.$message.error(response.data?.message || '更新失败')
+          // ✅ 优先显示后端返回的具体错误信息
+          const errorMsg = response.data?.data?.error || response.data?.message || '更新失败'
+          this.$message.error(errorMsg)
         }
       } catch (err) {
         point.precision = oldVal
         this.updatePointLocalState(point.id, 'precision', oldVal)
-        this.$message.error('更新失败: ' + (err.response?.data?.message || err.message))
+        // ✅ 优先显示后端返回的具体错误信息
+        const errorMsg =
+          err.response?.data?.data?.error ||
+          err.response?.data?.message ||
+          err.message ||
+          '更新失败'
+        this.$message.error(errorMsg)
       }
     },
 
@@ -2391,7 +2627,7 @@ export default {
         const updateData = {
           points: selectedPointsData.map((point) => ({
             id: point.id,
-            model_id: this.templateId,
+            model_id: Number(this.templateId), // ✅ 确保model_id是数字类型
             point_code: point.pointCode,
             point_name: point.pointName,
             is_active: status,
@@ -2451,7 +2687,7 @@ export default {
         const updateData = {
           points: selectedPointsData.map((point) => ({
             id: point.id,
-            model_id: this.templateId,
+            model_id: Number(this.templateId), // ✅ 确保model_id是数字类型
             point_code: point.pointCode,
             point_name: point.pointName,
             is_active: point.isActive,

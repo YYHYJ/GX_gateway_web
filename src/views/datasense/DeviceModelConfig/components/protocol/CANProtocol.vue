@@ -87,10 +87,7 @@
       <div v-else-if="points.length === 0 && !hasSearchFilter" class="empty-state">
         <i class="fas fa-database"></i>
         <h3>暂无点位数据</h3>
-        <p>还没有配置任何点位，点击"新建点位"开始配置</p>
-        <button class="btn btn-primary" @click="showAddPointDialog">
-          <i class="fas fa-plus"></i> 新建点位
-        </button>
+        <p>还没有配置任何点位，请点击上方"新建点位"开始配置</p>
       </div>
 
       <!-- 列表 -->
@@ -263,7 +260,7 @@
     </div>
 
     <!-- 添加/编辑点位对话框 -->
-    <div v-if="showDialog" class="dialog-overlay" @click.self="closeDialog">
+    <div v-if="showDialog" class="dialog-overlay">
       <div class="dialog-content">
         <div class="dialog-header">
           <h3>{{ editingPoint ? '编辑点位' : '新建点位' }}</h3>

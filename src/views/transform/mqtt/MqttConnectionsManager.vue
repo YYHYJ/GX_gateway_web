@@ -111,6 +111,17 @@
                           {{ s.scheme_name }}
                         </option>
                       </select>
+                      <button
+                        v-if="topic.scheme_id"
+                        class="topic-compress-toggle"
+                        @click.stop="toggleTopicCompress(topic.id, topic.compress_payload)"
+                        :title="topic.compress_payload ? '禁用压缩' : '启用压缩'"
+                        :class="{ active: topic.compress_payload }"
+                        :disabled="!connection.enabled || isProcessingTopic(topic.id)"
+                      >
+                        <i class="fas fa-compress"></i>
+                        {{ topic.compress_payload ? '已压缩' : '未压缩' }}
+                      </button>
                       <span class="topic-qos">QoS {{ topic.qos }}</span>
                       <button
                         class="topic-toggle"
@@ -242,7 +253,6 @@ export default {
       processingOperations: new Set(),
       statusTimer: null,
       schemes: [],
-      schemes: [],
     }
   },
   created() {
@@ -347,12 +357,140 @@ export default {
         await this.$axios.put('/api/mqtt/topic/bindscheme', {
           topic_id: topicId,
           scheme_id: schemeId ? Number(schemeId) : null,
+          compress_payload: 0, // 默认不压缩(0=不压缩, 1=压缩)
         })
         this.$message && this.$message.success(schemeId ? '已绑定方案' : '已解绑方案')
         await this.loadConnections()
       } catch (e) {
         this.$message && this.$message.error('绑定失败: ' + (e.message || '未知错误'))
       }
+    },
+
+    // 切换Topic压缩状态
+    async toggleTopicCompress(topicId, currentCompress) {
+      console.log('toggleTopicCompress called:', { topicId, currentCompress })
+
+      // 找到当前topic对应的scheme_id
+      const topic = this.findTopicById(topicId)
+      console.log('findTopicById result:', topic)
+
+      if (!topic || !topic.scheme_id) {
+        this.$message && this.$message.error('请先绑定方案')
+        return
+      }
+
+      try {
+        // 后端使用0/1表示压缩状态
+        const newCompressValue = currentCompress ? 0 : 1
+
+        console.log('Calling API with:', {
+          topic_id: topicId,
+          scheme_id: topic.scheme_id,
+          compress_payload: newCompressValue,
+        })
+
+        // 复用bindscheme API，传入相同的scheme_id和topic_id，只修改compress_payload
+        const response = await this.$axios.put('/api/mqtt/topic/bindscheme', {
+          topic_id: topicId,
+          scheme_id: topic.scheme_id,
+          compress_payload: newCompressValue,
+        })
+
+        console.log('API response:', response)
+        this.$message && this.$message.success(newCompressValue === 1 ? '已启用压缩' : '已禁用压缩')
+
+        // ✅ 立即更新本地数据，确保UI即时响应
+        const localTopic = this.findTopicById(topicId)
+        if (localTopic) {
+          console.log('立即更新本地topic.compress_payload为:', newCompressValue === 1)
+          localTopic.compress_payload = newCompressValue === 1
+        }
+
+        // 重新加载连接数据，从后端获取最新的compress_payload状态
+        console.log('Reloading connections...')
+        await this.loadConnections()
+        console.log('Connections reloaded')
+      } catch (e) {
+        console.error('toggleTopicCompress error:', e)
+        this.$message && this.$message.error('更新压缩状态失败: ' + (e.message || '未知错误'))
+      }
+    },
+
+    // 获取Topic压缩状态（可选，用于调试或显示详细信息）
+    async getTopicCompressStatus(topicId) {
+      try {
+        const response = await this.$axios.get('/api/mqtt/topic/compress', {
+          params: { topic_id: topicId },
+        })
+        console.log('Topic compress status:', response.data)
+        return response.data
+      } catch (e) {
+        console.error('获取压缩状态失败:', e)
+        return null
+      }
+    },
+
+    // 批量填充topics的compress_payload字段
+    async enrichTopicsWithCompressStatus(connections) {
+      if (!connections || connections.length === 0) return
+
+      // 收集所有有scheme_id的topic
+      const topicsToEnrich = []
+      connections.forEach((conn) => {
+        if (conn.topics && conn.topics.topics) {
+          conn.topics.topics.forEach((topic) => {
+            if (topic.scheme_id) {
+              topicsToEnrich.push(topic)
+            }
+          })
+        }
+      })
+
+      if (topicsToEnrich.length === 0) {
+        console.log('没有需要填充压缩状态的topic')
+        return
+      }
+
+      console.log(`开始批量获取 ${topicsToEnrich.length} 个topic的压缩状态...`)
+
+      // 并行获取所有topic的压缩状态
+      const promises = topicsToEnrich.map(async (topic) => {
+        try {
+          const status = await this.getTopicCompressStatus(topic.id)
+          if (status && status.bindings && status.bindings.length > 0) {
+            // 找到当前绑定的scheme的压缩状态
+            const currentBinding = status.bindings.find((b) => b.scheme_id === topic.scheme_id)
+            if (currentBinding) {
+              // ✅ 后端可能返回布尔值或数字，统一转换为布尔值
+              const rawValue = currentBinding.compress_payload
+              topic.compress_payload = rawValue === true || rawValue === 1
+              console.log(
+                `Topic ${topic.id}: compress_payload = ${rawValue} -> ${topic.compress_payload}`,
+              )
+            }
+          }
+        } catch (e) {
+          console.error(`获取topic ${topic.id} 压缩状态失败:`, e)
+        }
+      })
+
+      await Promise.all(promises)
+      console.log('所有topic压缩状态填充完成')
+
+      // ✅ 验证数据是否已更新
+      const enrichedCount = topicsToEnrich.filter((t) => t.compress_payload !== undefined).length
+      console.log(`已填充 ${enrichedCount}/${topicsToEnrich.length} 个topic的compress_payload字段`)
+    },
+
+    // 根据topic_id查找topic对象
+    findTopicById(topicId) {
+      for (const conn of this.connections) {
+        if (conn.topics && conn.topics.topics && Array.isArray(conn.topics.topics)) {
+          const topic = conn.topics.topics.find((t) => t.id === topicId)
+          if (topic) return topic
+        }
+      }
+      return null
     },
 
     // 打开上报点位配置
@@ -402,7 +540,27 @@ export default {
         const loadedConnections = await this.mqttService.getAllConnections()
         console.log('从API加载到的连接数据:', loadedConnections)
 
-        // ✅ 发出事件，让父组件更新 connections
+        // ✅ 批量获取所有topic的压缩状态
+        await this.enrichTopicsWithCompressStatus(loadedConnections)
+
+        // 检查topics中的compress_payload字段
+        if (loadedConnections && loadedConnections.length > 0) {
+          loadedConnections.forEach((conn) => {
+            if (conn.topics && conn.topics.topics) {
+              console.log(
+                `Connection ${conn.id} topics:`,
+                conn.topics.topics.map((t) => ({
+                  id: t.id,
+                  topic: t.topic,
+                  scheme_id: t.scheme_id,
+                  compress_payload: t.compress_payload,
+                })),
+              )
+            }
+          })
+        }
+
+        // ✅ 发出事件，让父组件更新 connections（包含compress_payload）
         this.$emit('connections-loaded', loadedConnections)
 
         // 如果有数据且父组件没有指定选中的连接，建议选中第一个
@@ -1193,6 +1351,42 @@ export default {
 .topic-scheme-select:focus {
   outline: none;
   border-color: #8e44ad;
+}
+
+/* Topic压缩开关按钮 */
+.topic-compress-toggle {
+  padding: 2px 8px;
+  border: 1px solid #d1d9e6;
+  border-radius: 3px;
+  font-size: 11px;
+  color: #7f8c8d;
+  background: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+
+.topic-compress-toggle:hover:not(:disabled) {
+  border-color: #3498db;
+  color: #3498db;
+}
+
+.topic-compress-toggle.active {
+  background: #e8f5e9;
+  border-color: #2e7d32;
+  color: #2e7d32;
+}
+
+.topic-compress-toggle.active:hover:not(:disabled) {
+  background: #c8e6c9;
+}
+
+.topic-compress-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* 滚动条样式 */

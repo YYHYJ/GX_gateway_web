@@ -2,10 +2,18 @@
 export const deviceStatus = {
   // 计算设备状态
   calculateDeviceStatus(device) {
+    // ✅ 优先使用后端返回的连接状态
+    if (device.conn_status) {
+      return device.conn_status === 'connected' ? 'online' : 'offline'
+    }
+
+    // 如果没有实时状态，根据启用状态判断
     if (!device.is_enabled) {
       return 'offline'
     }
-    return 'online'
+
+    // 默认显示离线（新设备尚未建立连接）
+    return 'offline'
   },
 
   // 根据实时状态更新设备状态

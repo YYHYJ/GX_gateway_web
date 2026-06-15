@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-overlay" @click.self="$emit('close')">
+  <div class="modal-overlay">
     <div class="delete-confirm-modal">
       <div class="modal-header danger">
         <h3><i class="fas fa-exclamation-triangle"></i> 确认删除设备模板</h3>

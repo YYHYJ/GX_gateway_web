@@ -85,7 +85,6 @@
                   <th>点位代码</th>
                   <th>点位名称</th>
                   <th>别名</th>
-                  <th>状态</th>
                 </tr>
               </thead>
               <tbody>
@@ -108,14 +107,6 @@
                     <div v-else class="cell-editable">
                       {{ alias.alias || '点击设置别名' }}
                     </div>
-                  </td>
-                  <td @click="toggleActive(alias)">
-                    <span
-                      class="status-badge toggle-badge"
-                      :class="alias.is_active ? 'status-active' : 'status-inactive'"
-                    >
-                      {{ alias.is_active ? '启用' : '停用' }}
-                    </span>
                   </td>
                 </tr>
               </tbody>

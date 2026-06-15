@@ -161,10 +161,11 @@ export const protocolMixin = {
     extractApiErrorMessage(errorData, isEdit = false) {
       const action = isEdit ? '更新' : '创建'
       if (errorData && errorData.code === 400) {
+        // ✅ 优先显示后端返回的具体错误信息
         const errorMsg = errorData.data?.error || errorData.message || `${action}失败`
-        return `${action}失败: ${errorMsg}`
+        return errorMsg
       }
-      return `${action}失败: ${errorData?.message || '未知错误'}`
+      return errorData?.message || `${action}失败`
     },
 
     extractHttpErrorMessage(err, isEdit = false) {
@@ -173,11 +174,12 @@ export const protocolMixin = {
         const status = err.response.status
         const errorData = err.response.data
         if (status === 400) {
+          // ✅ 优先显示后端返回的具体错误信息
           const errorMsg = errorData?.data?.error || errorData?.message || `${action}失败`
-          return `${action}失败: ${errorMsg}`
+          return errorMsg
         }
         if (status === 500) {
-          return `${action}失败: 服务器内部错误，请稍后重试`
+          return `服务器内部错误，请稍后重试`
         }
         const statusMessages = {
           401: '未授权，请重新登录',
@@ -186,12 +188,12 @@ export const protocolMixin = {
           409: '资源冲突',
         }
         const statusMessage = statusMessages[status] || `HTTP错误 (${status})`
-        return `${action}失败: ${errorData?.message || statusMessage}`
+        return errorData?.message || statusMessage
       }
       if (err.request) {
-        return `${action}失败: 网络错误，请检查网络连接`
+        return `网络错误，请检查网络连接`
       }
-      return `${action}失败: ${err.message || '未知错误'}`
+      return err.message || `${action}失败`
     },
   },
 }

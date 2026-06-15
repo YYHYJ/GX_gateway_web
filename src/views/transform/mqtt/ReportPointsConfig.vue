@@ -225,6 +225,16 @@ export default {
       return new Set(this.configuredPoints.map((p) => p.device_id)).size
     },
   },
+  watch: {
+    schemeId: {
+      handler(newVal) {
+        if (newVal) {
+          this.loadConfiguredPoints()
+        }
+      },
+      immediate: false,
+    },
+  },
   created() {
     this.loadDevices()
     this.loadConfiguredPoints()
@@ -268,10 +278,10 @@ export default {
               }))
             : []
         }
-        
+
         // ✅ 性能优化：清除缓存的 Set，下次使用时重新构建
         this.configuredPointCodesCache = null
-        
+
         // ✅ 性能优化：加载完 availablePoints 后，补充已配置点位的详细信息
         this.enrichConfiguredPointsDetails()
       } catch (e) {
@@ -284,14 +294,14 @@ export default {
     // ✅ 新增方法：补充已配置点位的详细信息
     enrichConfiguredPointsDetails() {
       if (!this.configuredPoints.length || !this.availablePoints.length) return
-      
+
       this.configuredPoints.forEach((rp) => {
         // 只补充当前选中设备的点位信息
         if (rp.device_id != this.selectedDeviceId) return
-        
+
         const key = `${rp.device_id}_${rp.point_code}`
         const pointDetail = this.pointsMap.get(key)
-        
+
         if (pointDetail) {
           // 只有当后端未返回时才补充
           if (!rp.point_name) rp.point_name = pointDetail.point_name || ''
@@ -312,10 +322,10 @@ export default {
         } else if (res && res.code === 200 && Array.isArray(res.data)) {
           data = res.data
         }
-        
+
         // ✅ 性能优化：直接使用后端返回的数据，详细信息在加载 availablePoints 后补充
         this.configuredPoints = data.map((p) => ({ ...p }))
-        
+
         // ✅ 性能优化：清除缓存的 Set，下次使用时重新构建
         this.configuredPointCodesCache = null
       } catch (e) {

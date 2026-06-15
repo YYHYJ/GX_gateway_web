@@ -89,6 +89,8 @@ export function formatDbToFrontend(brokersData = [], topicsData = []) {
         enabled: Boolean(topic[DB_FIELDS.TOPICS.ENABLED]),
         description: topic[DB_FIELDS.TOPICS.DESCRIPTION] || '',
         scheme_id: topic.scheme_id || null,
+        // ✅ 后端可能返回布尔值或数字，统一转换为布尔值
+        compress_payload: topic.compress_payload === true || topic.compress_payload === 1,
       }))
 
     const subscribeTopics = brokerTopics

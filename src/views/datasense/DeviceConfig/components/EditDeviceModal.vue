@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="modal-overlay" @click.self="handleClose">
+  <div v-if="visible" class="modal-overlay">
     <div class="modal-container">
       <!-- 模态框头部 -->
       <div class="modal-header">
@@ -137,7 +137,11 @@
               <h4 class="config-title">{{ formData.protocol_type.name }} 配置</h4>
               <div class="config-content">
                 <!-- Modbus TCP 配置 -->
-                <div v-if="formData.protocol_type.name === 'ModbusTCP'" class="config-fields" key="modbus-tcp">
+                <div
+                  v-if="formData.protocol_type.name === 'ModbusTCP'"
+                  class="config-fields"
+                  key="modbus-tcp"
+                >
                   <div class="config-row">
                     <div class="form-group">
                       <label class="form-label">IP地址 <span class="required">*</span></label>
@@ -215,7 +219,11 @@
                   </div>
                 </div>
                 <!-- Modbus RTU 配置 -->
-                <div v-else-if="formData.protocol_type.name === 'ModbusRTU'" class="config-fields" key="modbus-rtu">
+                <div
+                  v-else-if="formData.protocol_type.name === 'ModbusRTU'"
+                  class="config-fields"
+                  key="modbus-rtu"
+                >
                   <div class="config-row">
                     <div class="form-group">
                       <label class="form-label">串口 <span class="required">*</span></label>
@@ -352,7 +360,11 @@
                 </div>
 
                 <!-- CAN 协议配置 -->
-                <div v-else-if="formData.protocol_type.name === 'CAN'" class="config-fields" key="can">
+                <div
+                  v-else-if="formData.protocol_type.name === 'CAN'"
+                  class="config-fields"
+                  key="can"
+                >
                   <div class="config-row">
                     <div class="form-group">
                       <label class="form-label">接口名 <span class="required">*</span></label>
@@ -747,7 +759,9 @@ export default {
         // 优先使用接口返回的完整数据：rawData 为 getDeviceInstances 接口的原始设备对象，含 protocol_type.config
         let source = device.rawData || device
         const hasConfigFromList =
-          source.protocol_type && source.protocol_type.config && Object.keys(source.protocol_type.config).length > 0
+          source.protocol_type &&
+          source.protocol_type.config &&
+          Object.keys(source.protocol_type.config).length > 0
 
         // 若列表中无完整配置（例如旧数据或接口未返回 config），则请求详情接口从数据库拉取
         if (!hasConfigFromList) {
@@ -777,7 +791,10 @@ export default {
           },
         }
 
-        if (!this.formData.protocol_type.config || typeof this.formData.protocol_type.config !== 'object') {
+        if (
+          !this.formData.protocol_type.config ||
+          typeof this.formData.protocol_type.config !== 'object'
+        ) {
           this.formData.protocol_type.config = {}
         }
         const cfg = this.formData.protocol_type.config
@@ -985,7 +1002,12 @@ export default {
           this.protocolErrors.interface_name = '接口名不能为空'
           isValid = false
         }
-        if (config.can_id === undefined || config.can_id === null || config.can_id < 0 || config.can_id > 0x1fffffff) {
+        if (
+          config.can_id === undefined ||
+          config.can_id === null ||
+          config.can_id < 0 ||
+          config.can_id > 0x1fffffff
+        ) {
           this.protocolErrors.can_id = 'CAN ID 必须在0到0x1FFFFFFF之间'
           isValid = false
         }
@@ -997,7 +1019,11 @@ export default {
           this.protocolErrors.filter_mask = '过滤掩码必须在0到0x1FFFFFFF之间'
           isValid = false
         }
-        if (config.data_timeout_ms === undefined || config.data_timeout_ms === null || config.data_timeout_ms < 0) {
+        if (
+          config.data_timeout_ms === undefined ||
+          config.data_timeout_ms === null ||
+          config.data_timeout_ms < 0
+        ) {
           this.protocolErrors.data_timeout_ms = '数据超时不能为空且不能为负'
           isValid = false
         }

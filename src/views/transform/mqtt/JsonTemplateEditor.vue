@@ -268,6 +268,17 @@ export default {
       }
     },
   },
+  watch: {
+    schemeId: {
+      handler(newVal) {
+        if (newVal) {
+          this.loadReportPoints()
+          this.loadTemplate()
+        }
+      },
+      immediate: false,
+    },
+  },
   created() {
     this.loadReportPoints()
     this.loadDevices()

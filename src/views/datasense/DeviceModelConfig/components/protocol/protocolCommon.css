@@ -94,6 +94,11 @@
   opacity: 0.9;
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* 表格样式 */
 .points-container {
   padding: 0 20px;

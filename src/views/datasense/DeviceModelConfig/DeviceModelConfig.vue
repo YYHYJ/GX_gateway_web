@@ -144,6 +144,7 @@ import deviceTemplateService from './services/deviceTemplateService'
 import DeleteConfirmModal from './components/modals/DeleteConfirmModal.vue'
 import TemplateFormModal from './components/modals/TemplateFormModal.vue'
 import { getProtocolDisplayName, getProtocolIcon } from './services/protocolService'
+import templateMapService from '@/utils/templateMapService'
 
 export default {
   name: 'DeviceModelConfig',
@@ -248,20 +249,37 @@ export default {
         console.log('正在加载协议类型...')
         const protocols = await deviceTemplateService.getProtocolTypes()
         console.log('获取到的协议类型:', protocols)
-        this.protocolTypes = protocols || []
+
+        // ✅ 只保留支持的协议类型：Modbus RTU、Modbus TCP、CAN
+        // 支持多种命名格式的匹配
+        const supportedProtocols = [
+          'CAN',
+          'can',
+          'ModbusRTU',
+          'modbusrtu',
+          'Modbus_RTU',
+          'MODBUS_RTU',
+          'Modbus RTU',
+          'modbus_rtu',
+          'ModbusTCP',
+          'modbustcp',
+          'Modbus_TCP',
+          'MODBUS_TCP',
+          'Modbus TCP',
+          'modbus_tcp',
+        ]
+
+        this.protocolTypes = (protocols || []).filter((p) => {
+          const matched = supportedProtocols.includes(p)
+          console.log(`协议 "${p}" 是否匹配: ${matched}`)
+          return matched
+        })
+
+        console.log('过滤后的协议类型:', this.protocolTypes)
       } catch (error) {
         console.error('加载协议类型失败:', error)
-        // 如果后端API失败，使用默认的协议类型列表
-        this.protocolTypes = [
-          'CAN',
-          'IEC-61850',
-          'MQTT',
-          'Modbus RTU',
-          'Modbus TCP',
-          'OPCUA',
-          'RS232',
-          'RS485',
-        ]
+        // 如果后端API失败，使用默认的协议类型列表（仅支持Modbus和CAN）
+        this.protocolTypes = ['CAN', 'ModbusRTU', 'ModbusTCP']
         this.$message.warning('使用默认协议类型')
       } finally {
         this.loadingProtocols = false
@@ -362,6 +380,10 @@ export default {
       } else {
         this.closeEditModal()
       }
+
+      // ✅ 清除模板映射缓存，确保下次获取最新数据
+      templateMapService.clearCache()
+
       // 重新加载数据
       this.loadDeviceTemplates()
     },

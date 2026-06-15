@@ -283,10 +283,27 @@ export default {
       try {
         console.log('加载模板信息，templateId:', this.templateId)
 
+        // ✅ 先清除缓存，确保获取最新数据
+        templateMapService.clearCache()
+
         // 使用共享的模板映射服务
         await templateMapService.loadTemplates()
         this.templateName = templateMapService.getTemplateName(this.templateId)
-        
+
+        // ✅ 如果还是未知模板，尝试直接从API获取
+        if (this.templateName === '未知模板') {
+          console.warn(`模板ID ${this.templateId} 未找到，尝试直接查询...`)
+          try {
+            const response = await this.$axios.get(`/api/device/template/${this.templateId}`)
+            if (response.code === 200 && response.data) {
+              this.templateName = response.data.model_name || '未知模板'
+              console.log('直接查询到模板名称:', this.templateName)
+            }
+          } catch (e) {
+            console.error('直接查询模板失败:', e)
+          }
+        }
+
         this.templateData = {
           id: this.templateId,
           model_name: this.templateName,
