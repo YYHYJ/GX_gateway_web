@@ -115,6 +115,12 @@ const routes = [
     meta: { requiresAuth: true, activeNav: 'system-management', activeSubItem: 'user-management' },
   },
   {
+    path: '/system/sysvars',
+    name: 'SysVarsConfig',
+    component: () => import('@/views/systemmanagement/SysVarsConfig.vue'),
+    meta: { requiresAuth: true, activeNav: 'system-management', activeSubItem: 'sysvars-config' },
+  },
+  {
     path: '/system/backup',
     name: 'DataBackup',
     component: () => import('@/views/systemmanagement/DataBackup.vue'),

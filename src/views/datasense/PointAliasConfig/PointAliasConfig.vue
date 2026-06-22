@@ -1,5 +1,10 @@
 <template>
-  <MainLayout active-nav="data" user-name="管理员" @nav-change="handleNavigation">
+  <MainLayout
+    active-nav="data-collection"
+    active-sub-item="point-alias"
+    user-name="管理员"
+    @nav-change="handleNavigation"
+  >
     <div class="content-area">
       <!-- 面包屑导航 -->
       <PageHeader
@@ -31,130 +36,134 @@
         <!-- 表存在，显示正常内容 -->
         <template v-else>
           <!-- 筛选栏 -->
-          <div class="filter-bar">
-            <div class="filter-item">
-              <label>选择设备：</label>
-              <select v-model="selectedDeviceId" @change="loadAliases">
-                <option value="">全部设备</option>
-                <option v-for="device in devices" :key="device.id" :value="device.id">
-                  {{ device.device_name }} ({{ device.device_code }})
-                </option>
-              </select>
-            </div>
+          <div class="card">
+            <div class="filter-bar">
+              <div class="filter-item">
+                <label>选择设备：</label>
+                <select v-model="selectedDeviceId" @change="loadAliases">
+                  <option value="">全部设备</option>
+                  <option v-for="device in devices" :key="device.id" :value="device.id">
+                    {{ device.device_name }} ({{ device.device_code }})
+                  </option>
+                </select>
+              </div>
 
-            <div class="filter-item">
-              <input
-                type="text"
-                v-model="searchKeyword"
-                placeholder="搜索点位代码/名称/别名..."
-                @input="handleSearch"
-              />
-            </div>
+              <div class="filter-item">
+                <input
+                  type="text"
+                  v-model="searchKeyword"
+                  placeholder="搜索点位代码/名称/别名..."
+                  @input="handleSearch"
+                />
+              </div>
 
-            <div class="filter-actions">
-              <button class="btn btn-primary" @click="handleSync">
-                <i class="fas fa-sync"></i> 增量更新
-              </button>
-              <button class="btn btn-default" @click="resetFilter">
-                <i class="fas fa-redo"></i> 重置
-              </button>
+              <div class="filter-actions">
+                <button class="btn btn-primary" @click="handleSync">
+                  <i class="fas fa-sync"></i> 增量更新
+                </button>
+                <button class="btn btn-default" @click="resetFilter">
+                  <i class="fas fa-redo"></i> 重置
+                </button>
+              </div>
             </div>
           </div>
 
           <!-- 数据表格 -->
-          <div class="table-wrapper">
-            <!-- 加载状态 -->
-            <div v-if="loading" class="loading-state">
-              <i class="fas fa-spinner fa-spin fa-2x"></i>
-              <p>加载中...</p>
-            </div>
-
-            <!-- 空状态 -->
-            <div v-else-if="!loading && filteredAliases.length === 0" class="empty-state">
-              <i class="fas fa-inbox fa-3x"></i>
-              <p>{{ searchKeyword ? '无匹配数据' : '暂无点位别名数据' }}</p>
-            </div>
-
-            <!-- 数据表格 -->
-            <table v-else class="alias-table">
-              <thead>
-                <tr>
-                  <th style="width: 60px">序号</th>
-                  <th>设备名称</th>
-                  <th>设备代码</th>
-                  <th>点位代码</th>
-                  <th>点位名称</th>
-                  <th>别名</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(alias, index) in displayAliases" :key="alias.id">
-                  <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
-                  <td>{{ alias.device_name }}</td>
-                  <td>{{ alias.device_code }}</td>
-                  <td>{{ alias.point_code }}</td>
-                  <td>{{ alias.point_name }}</td>
-                  <td @click="startEdit(alias)">
-                    <input
-                      v-if="editingId === alias.id"
-                      v-model="editForm.alias"
-                      class="inline-edit-input"
-                      @blur="saveEdit(alias)"
-                      @keyup.enter="saveEdit(alias)"
-                      @keyup.esc="cancelEdit"
-                      ref="editInput"
-                    />
-                    <div v-else class="cell-editable">
-                      {{ alias.alias || '点击设置别名' }}
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            <!-- 分页组件 -->
-            <div v-if="total > pageSize" class="pagination-container">
-              <div class="pagination-info">
-                <span>每页</span>
-                <select
-                  v-model.number="pageSize"
-                  @change="handlePageSizeChange"
-                  class="page-size-select"
-                >
-                  <option :value="10">10</option>
-                  <option :value="20">20</option>
-                  <option :value="50">50</option>
-                  <option :value="100">100</option>
-                </select>
-                <span>条，共 {{ total }} 条</span>
+          <div class="card">
+            <div class="table-wrapper">
+              <!-- 加载状态 -->
+              <div v-if="loading" class="loading-state">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                <p>加载中...</p>
               </div>
 
-              <div class="pagination">
-                <button class="page-btn" @click="goToPage(1)" :disabled="currentPage <= 1">
-                  首页
-                </button>
-                <button class="page-btn" @click="prevPage" :disabled="currentPage <= 1">
-                  上一页
-                </button>
-                <button
-                  v-for="page in pageNumbers"
-                  :key="page"
-                  class="page-btn"
-                  :class="{ active: page === currentPage }"
-                  @click="goToPage(page)"
-                >
-                  {{ page }}
-                </button>
-                <button class="page-btn" @click="nextPage" :disabled="currentPage >= totalPages">
-                  下一页
-                </button>
-                <button
-                  class="page-btn"
-                  @click="goToPage(totalPages)"
-                  :disabled="currentPage >= totalPages"
-                >
-                  尾页
-                </button>
+              <!-- 空状态 -->
+              <div v-else-if="!loading && filteredAliases.length === 0" class="empty-state">
+                <i class="fas fa-inbox fa-3x"></i>
+                <p>{{ searchKeyword ? '无匹配数据' : '暂无点位别名数据' }}</p>
+              </div>
+
+              <!-- 数据表格 -->
+              <table v-else class="alias-table">
+                <thead>
+                  <tr>
+                    <th style="width: 60px">序号</th>
+                    <th>设备名称</th>
+                    <th>设备代码</th>
+                    <th>点位代码</th>
+                    <th>点位名称</th>
+                    <th>别名</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(alias, index) in displayAliases" :key="alias.id">
+                    <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
+                    <td>{{ alias.device_name }}</td>
+                    <td>{{ alias.device_code }}</td>
+                    <td>{{ alias.point_code }}</td>
+                    <td>{{ alias.point_name }}</td>
+                    <td @click="startEdit(alias)">
+                      <input
+                        v-if="editingId === alias.id"
+                        v-model="editForm.alias"
+                        class="inline-edit-input"
+                        @blur="saveEdit(alias)"
+                        @keyup.enter="saveEdit(alias)"
+                        @keyup.esc="cancelEdit"
+                        ref="editInput"
+                      />
+                      <div v-else class="cell-editable">
+                        {{ alias.alias || '点击设置别名' }}
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <!-- 分页组件 -->
+              <div v-if="total > pageSize" class="pagination-container">
+                <div class="pagination-info">
+                  <span>每页</span>
+                  <select
+                    v-model.number="pageSize"
+                    @change="handlePageSizeChange"
+                    class="page-size-select"
+                  >
+                    <option :value="10">10</option>
+                    <option :value="20">20</option>
+                    <option :value="50">50</option>
+                    <option :value="100">100</option>
+                  </select>
+                  <span>条，共 {{ total }} 条</span>
+                </div>
+
+                <div class="pagination">
+                  <button class="page-btn" @click="goToPage(1)" :disabled="currentPage <= 1">
+                    首页
+                  </button>
+                  <button class="page-btn" @click="prevPage" :disabled="currentPage <= 1">
+                    上一页
+                  </button>
+                  <button
+                    v-for="page in pageNumbers"
+                    :key="page"
+                    class="page-btn"
+                    :class="{ active: page === currentPage }"
+                    @click="goToPage(page)"
+                  >
+                    {{ page }}
+                  </button>
+                  <button class="page-btn" @click="nextPage" :disabled="currentPage >= totalPages">
+                    下一页
+                  </button>
+                  <button
+                    class="page-btn"
+                    @click="goToPage(totalPages)"
+                    :disabled="currentPage >= totalPages"
+                  >
+                    尾页
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -570,9 +579,9 @@ export default {
 
 <style scoped>
 .alias-content {
-  padding: 20px;
-  background: #f5f7fa;
-  min-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 /* 检查状态 */
@@ -582,9 +591,6 @@ export default {
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   color: #999;
 }
 
@@ -603,12 +609,8 @@ export default {
   display: flex;
   gap: 16px;
   align-items: center;
-  padding: 16px 20px;
-  background: #fff;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   flex-wrap: wrap;
+  margin-bottom: 20px;
 }
 
 .filter-item {
@@ -691,10 +693,7 @@ export default {
 
 /* 表格容器 */
 .table-container {
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  /* 使用全局.card样式 */
 }
 
 /* 加载状态 */
@@ -770,8 +769,8 @@ export default {
 .type-tag {
   display: inline-block;
   padding: 4px 10px;
-  background: #d4edda;
-  color: #155724;
+  background: #f0f0f0;
+  color: #333;
   border-radius: 12px;
   font-size: 12px;
   font-weight: bold;
@@ -810,16 +809,8 @@ export default {
   border-radius: 12px;
   font-size: 12px;
   font-weight: bold;
-}
-
-.status-active {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.status-inactive {
-  background-color: #f8d7da;
-  color: #721c24;
+  background-color: #f0f0f0;
+  color: #333;
 }
 
 .toggle-badge {

@@ -151,6 +151,11 @@ export default {
               path: '/system/users',
             },
             {
+              id: 'sysvars-config',
+              name: '系统变量',
+              path: '/system/sysvars',
+            },
+            {
               id: 'data-backup',
               name: '数据备份',
               path: '/system/backup',

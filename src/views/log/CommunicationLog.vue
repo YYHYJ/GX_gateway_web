@@ -403,9 +403,26 @@ export default {
 
     // 新增：统一解析日志组件的方法
     parseLogComponents(log) {
-      // 提取时间
-      const timeMatch = log.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/)
+      // 调试输出：查看原始日志
+      console.log('=== 原始日志 ===', log)
+      
+      // 提取时间（支持毫秒）
+      const timeMatch = log.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?)/)
+      console.log('时间匹配结果:', timeMatch)
+      
       if (!timeMatch) {
+        // 如果没有匹配到时间，检查是否是纯级别行
+        const trimmed = log.trim()
+        if (['INFO', 'WARN', 'ERROR', 'DEBUG'].includes(trimmed.toUpperCase())) {
+          return {
+            time: '',
+            level: trimmed.toUpperCase(),
+            module: '',
+            source: '',
+            message: '',
+          }
+        }
+        
         return {
           time: '',
           level: 'INFO',
@@ -417,6 +434,9 @@ export default {
 
       const time = timeMatch[1]
       const afterTime = log.substring(timeMatch[0].length).trim()
+      
+      console.log('提取的时间:', time)
+      console.log('时间后的内容:', afterTime)
 
       // 提取日志级别（第一个方括号）
       let level = 'INFO'
@@ -446,7 +466,7 @@ export default {
           // 模块通常是数字字母组合，不包含方括号
           if (!moduleContent.includes('[') && !moduleContent.includes(']')) {
             // 简单验证：模块名通常是较短的标识符
-            if (moduleContent.length <= 50 && /^[A-Za-z0-9_\-\.]+$/.test(moduleContent)) {
+            if (moduleContent.length <= 50 && /^[A-Za-z0-9_\-.]+$/.test(moduleContent)) {
               module = moduleContent
               remaining = remaining.substring(moduleEnd + 1).trim()
             }
@@ -456,6 +476,14 @@ export default {
 
       // 剩余部分全部作为消息
       const message = remaining.trim()
+      
+      console.log('最终解析结果:', {
+        time,
+        level,
+        module,
+        source: '',
+        message
+      })
 
       return {
         time,
@@ -824,15 +852,17 @@ export default {
   align-items: center;
   gap: 12px;
   margin-bottom: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* 禁止换行 */
+  overflow-x: auto; /* 超出时横向滚动 */
 }
 
 .log-time {
   color: #333;
   font-size: 12px;
   font-weight: 600;
-  min-width: 160px;
+  min-width: 180px; /* 增加最小宽度以容纳毫秒 */
   font-family: 'Monaco', 'Menlo', monospace;
+  white-space: nowrap; /* 时间不换行 */
 }
 
 .log-level {
