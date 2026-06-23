@@ -55,7 +55,13 @@
                   :key="sysVar.id"
                   class="btn-variable"
                   @click="insertVariable('publish', sysVar.var_value)"
-                  :title="'插入系统变量: ' + (sysVar.description || sysVar.var_name) + ' (当前值: ' + sysVar.var_value + ')'"
+                  :title="
+                    '插入系统变量: ' +
+                    (sysVar.description || sysVar.var_name) +
+                    ' (当前值: ' +
+                    sysVar.var_value +
+                    ')'
+                  "
                 >
                   {{ sysVar.var_name }}={{ sysVar.var_value }}
                 </button>
@@ -148,7 +154,13 @@
                   :key="sysVar.id"
                   class="btn-variable"
                   @click="insertVariable('subscribe', sysVar.var_value)"
-                  :title="'插入系统变量: ' + (sysVar.description || sysVar.var_name) + ' (当前值: ' + sysVar.var_value + ')'"
+                  :title="
+                    '插入系统变量: ' +
+                    (sysVar.description || sysVar.var_name) +
+                    ' (当前值: ' +
+                    sysVar.var_value +
+                    ')'
+                  "
                 >
                   {{ sysVar.var_name }}={{ sysVar.var_value }}
                 </button>
@@ -319,10 +331,13 @@
                 <strong>系统变量：</strong>点击按钮插入变量的当前值
                 <ul v-if="sysVars.length > 0">
                   <li v-for="sysVar in sysVars" :key="sysVar.id">
-                    <code>{{ sysVar.var_name }}</code> = {{ sysVar.var_value }} - {{ sysVar.description || sysVar.var_name }}
+                    <code>{{ sysVar.var_name }}</code> = {{ sysVar.var_value }} -
+                    {{ sysVar.description || sysVar.var_name }}
                   </li>
                 </ul>
-                <p v-else style="color: #95a5a6; font-size: 13px;">暂无系统变量，请先在“系统管理 > 系统变量”中配置</p>
+                <p v-else style="color: #95a5a6; font-size: 13px">
+                  暂无系统变量，请先在“系统管理 > 系统变量”中配置
+                </p>
               </li>
               <li><strong>消息保留(Retain)：</strong>新订阅者会收到最后一条保留消息</li>
               <li><strong>QoS等级：</strong>决定消息传递的可靠性(0/1/2)</li>

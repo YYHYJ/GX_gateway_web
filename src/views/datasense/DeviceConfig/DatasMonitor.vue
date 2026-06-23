@@ -938,7 +938,8 @@ export default {
 
     // 解析日志组件
     parseLogComponents(log) {
-      const timeMatch = log.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/)
+      // 支持毫秒级时间戳: 2026-06-12 14:00:27.101
+      const timeMatch = log.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{3})?)/)
       if (!timeMatch) {
         return {
           time: '',

@@ -193,7 +193,7 @@
             <label>系统变量</label>
             <select v-model="selectedNode.value">
               <option value="">请选择</option>
-              
+
               <!-- 内置动态变量 -->
               <optgroup label="内置变量(运行时替换)">
                 <option value="timestamp">timestamp — 当前时间戳（毫秒）</option>
@@ -204,11 +204,12 @@
                 <option value="scheme_name">scheme_name — 当前方案名称</option>
                 <option value="point_count">point_count — 方案内点位总数</option>
               </optgroup>
-              
+
               <!-- 自定义系统变量 -->
               <optgroup v-if="sysVars.length > 0" label="自定义变量">
                 <option v-for="sysVar in sysVars" :key="sysVar.id" :value="sysVar.var_value">
-                  {{ sysVar.var_name }} = {{ sysVar.var_value }}{{ sysVar.description ? ' - ' + sysVar.description : '' }}
+                  {{ sysVar.var_name }} = {{ sysVar.var_value
+                  }}{{ sysVar.description ? ' - ' + sysVar.description : '' }}
                 </option>
               </optgroup>
             </select>
@@ -383,23 +384,23 @@ export default {
     // 将fixed类型转换为system类型（如果是自定义系统变量的值）
     convertFixedToSysVar(node) {
       const converted = { ...node }
-      
+
       if (converted.children) {
-        converted.children = converted.children.map(child => this.convertFixedToSysVar(child))
+        converted.children = converted.children.map((child) => this.convertFixedToSysVar(child))
       }
-      
+
       // 如果是fixed类型且值匹配自定义系统变量，转换为system类型
       if (converted.type === 'leaf' && converted.source === 'fixed' && converted.value) {
-        const isCustom = this.sysVars.some(sv => sv.var_value === converted.value)
+        const isCustom = this.sysVars.some((sv) => sv.var_value === converted.value)
         if (isCustom) {
           return {
             ...converted,
-            source: 'system'
+            source: 'system',
             // value保持不变，仍然是实际值
           }
         }
       }
-      
+
       return converted
     },
 
@@ -407,7 +408,7 @@ export default {
       try {
         // 在保存前，将自定义系统变量转换为fixed类型
         const templateToSave = this.convertCustomSysVars(this.template)
-        
+
         await this.$axios.put('/api/mqtt/report_template', {
           scheme_id: Number(this.schemeId),
           template: this.stripIds(templateToSave),
@@ -421,23 +422,23 @@ export default {
     // 将自定义系统变量转换为fixed类型
     convertCustomSysVars(node) {
       const converted = { ...node }
-      
+
       if (converted.children) {
-        converted.children = converted.children.map(child => this.convertCustomSysVars(child))
+        converted.children = converted.children.map((child) => this.convertCustomSysVars(child))
       }
-      
+
       // 如果是system类型且值是自定义系统变量的值，转换为fixed类型
       if (converted.type === 'leaf' && converted.source === 'system' && converted.value) {
-        const isCustom = this.sysVars.some(sv => sv.var_value === converted.value)
+        const isCustom = this.sysVars.some((sv) => sv.var_value === converted.value)
         if (isCustom) {
           return {
             ...converted,
-            source: 'fixed'
+            source: 'fixed',
             // value保持不变，已经是实际值
           }
         }
       }
-      
+
       return converted
     },
 
@@ -603,7 +604,7 @@ export default {
       if (c.source === 'system') {
         if (!c.value) return null
         // 检查是否为自定义系统变量(值是实际值,不是变量名)
-        const isCustom = this.sysVars.some(sv => sv.var_value === c.value)
+        const isCustom = this.sysVars.some((sv) => sv.var_value === c.value)
         if (isCustom) {
           // 自定义系统变量: 直接显示值(虽然source是system,但实际是固定值)
           return c.value
