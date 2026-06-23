@@ -51,32 +51,13 @@
               />
               <div class="variable-buttons" v-if="enabled">
                 <button
+                  v-for="sysVar in sysVars"
+                  :key="sysVar.id"
                   class="btn-variable"
-                  @click="insertVariable('publish', '${device_id}')"
-                  title="插入设备ID变量"
+                  @click="insertVariable('publish', sysVar.var_value)"
+                  :title="'插入系统变量: ' + (sysVar.description || sysVar.var_name) + ' (当前值: ' + sysVar.var_value + ')'"
                 >
-                  ${device_id}
-                </button>
-                <button
-                  class="btn-variable"
-                  @click="insertVariable('publish', '${timestamp}')"
-                  title="插入时间戳变量"
-                >
-                  ${timestamp}
-                </button>
-                <button
-                  class="btn-variable"
-                  @click="insertVariable('publish', '${site_id}')"
-                  title="插入站点ID变量"
-                >
-                  ${site_id}
-                </button>
-                <button
-                  class="btn-variable"
-                  @click="insertVariable('publish', '${data.*}')"
-                  title="插入数据通配符"
-                >
-                  ${data.*}
+                  {{ sysVar.var_name }}={{ sysVar.var_value }}
                 </button>
               </div>
             </div>
@@ -151,23 +132,25 @@
                 <button
                   class="btn-variable"
                   @click="insertVariable('subscribe', '+')"
-                  title="插入单层通配符"
+                  title="插入单层通配符(匹配一层任意内容)"
                 >
                   +
                 </button>
                 <button
                   class="btn-variable"
                   @click="insertVariable('subscribe', '#')"
-                  title="插入多层通配符"
+                  title="插入多层通配符(匹配剩余所有层)"
                 >
                   #
                 </button>
                 <button
+                  v-for="sysVar in sysVars"
+                  :key="sysVar.id"
                   class="btn-variable"
-                  @click="insertVariable('subscribe', '${device_id}')"
-                  title="插入设备ID变量"
+                  @click="insertVariable('subscribe', sysVar.var_value)"
+                  :title="'插入系统变量: ' + (sysVar.description || sysVar.var_name) + ' (当前值: ' + sysVar.var_value + ')'"
                 >
-                  ${device_id}
+                  {{ sysVar.var_name }}={{ sysVar.var_value }}
                 </button>
               </div>
             </div>
@@ -323,7 +306,7 @@
             <ul>
               <li>主题由多个层级组成，使用 <code>/</code> 分隔</li>
               <li>例如：<code>energy/data/device001/metrics</code></li>
-              <li>可以使用系统变量自动替换，如 <code>${device_id}</code></li>
+              <li>可以使用系统变量自动替换，如 <code>${var_name}</code></li>
               <li>建议层级不超过5层，保持简洁易读</li>
             </ul>
           </div>
@@ -333,13 +316,13 @@
             <h5><i class="fas fa-upload"></i> 发布主题说明</h5>
             <ul>
               <li>
-                <strong>系统变量：</strong>运行时自动替换为实际值
-                <ul>
-                  <li><code>${device_id}</code> - 设备唯一标识</li>
-                  <li><code>${timestamp}</code> - 当前时间戳(毫秒)</li>
-                  <li><code>${site_id}</code> - 站点ID</li>
-                  <li><code>${data.*}</code> - 数据通配符</li>
+                <strong>系统变量：</strong>点击按钮插入变量的当前值
+                <ul v-if="sysVars.length > 0">
+                  <li v-for="sysVar in sysVars" :key="sysVar.id">
+                    <code>{{ sysVar.var_name }}</code> = {{ sysVar.var_value }} - {{ sysVar.description || sysVar.var_name }}
+                  </li>
                 </ul>
+                <p v-else style="color: #95a5a6; font-size: 13px;">暂无系统变量，请先在“系统管理 > 系统变量”中配置</p>
               </li>
               <li><strong>消息保留(Retain)：</strong>新订阅者会收到最后一条保留消息</li>
               <li><strong>QoS等级：</strong>决定消息传递的可靠性(0/1/2)</li>
@@ -622,6 +605,8 @@
 </template>
 
 <script>
+import { getSysVars } from '@/api/sysvars'
+
 export default {
   name: 'TopicManager',
   props: {
@@ -655,6 +640,7 @@ export default {
       editingId: null,
       showHelp: false, // 是否显示帮助模态框
       helpType: 'publish', // 帮助类型：'publish' 或 'subscribe'
+      sysVars: [], // 系统变量列表
     }
   },
   computed: {
@@ -685,7 +671,22 @@ export default {
       deep: true,
     },
   },
+  created() {
+    this.loadSysVars()
+  },
   methods: {
+    // 加载系统变量列表
+    async loadSysVars() {
+      try {
+        const response = await getSysVars()
+        if (response.code === 200) {
+          this.sysVars = response.data || []
+        }
+      } catch (error) {
+        console.error('加载系统变量失败:', error)
+      }
+    },
+
     // 添加发布主题
     addPublishTopic() {
       if (!this.newPublish.topic.trim()) return

@@ -193,13 +193,24 @@
             <label>系统变量</label>
             <select v-model="selectedNode.value">
               <option value="">请选择</option>
-              <option value="timestamp">timestamp — 当前时间戳（毫秒）</option>
-              <option value="timestamp_s">timestamp_s — 当前时间戳（秒）</option>
-              <option value="datetime">datetime — 格式化时间</option>
-              <option value="topic_name">topic_name — 当前topic名称</option>
-              <option value="broker_name">broker_name — 当前broker名称</option>
-              <option value="scheme_name">scheme_name — 当前方案名称</option>
-              <option value="point_count">point_count — 方案内点位总数</option>
+              
+              <!-- 内置动态变量 -->
+              <optgroup label="内置变量(运行时替换)">
+                <option value="timestamp">timestamp — 当前时间戳（毫秒）</option>
+                <option value="timestamp_s">timestamp_s — 当前时间戳（秒）</option>
+                <option value="datetime">datetime — 格式化时间</option>
+                <option value="topic_name">topic_name — 当前topic名称</option>
+                <option value="broker_name">broker_name — 当前broker名称</option>
+                <option value="scheme_name">scheme_name — 当前方案名称</option>
+                <option value="point_count">point_count — 方案内点位总数</option>
+              </optgroup>
+              
+              <!-- 自定义系统变量 -->
+              <optgroup v-if="sysVars.length > 0" label="自定义变量">
+                <option v-for="sysVar in sysVars" :key="sysVar.id" :value="sysVar.var_value">
+                  {{ sysVar.var_name }} = {{ sysVar.var_value }}{{ sysVar.description ? ' - ' + sysVar.description : '' }}
+                </option>
+              </optgroup>
             </select>
           </div>
         </template>
@@ -215,6 +226,7 @@
 
 <script>
 import JteNode from './JteNode.vue'
+import { getSysVars } from '@/api/sysvars'
 
 let _nid = 0
 function gid() {
@@ -250,6 +262,7 @@ export default {
       selectedId: null,
       reportPoints: [],
       devices: [],
+      sysVars: [], // 自定义系统变量列表(从API获取)
     }
   },
   computed: {
@@ -282,6 +295,7 @@ export default {
   created() {
     this.loadReportPoints()
     this.loadDevices()
+    this.loadSysVars()
     this.loadTemplate()
   },
   methods: {
@@ -339,27 +353,92 @@ export default {
       } catch (e) {}
     },
 
+    async loadSysVars() {
+      try {
+        const response = await getSysVars()
+        if (response.code === 200) {
+          this.sysVars = response.data || []
+        }
+      } catch (error) {
+        console.error('加载系统变量失败:', error)
+      }
+    },
+
     async loadTemplate() {
       try {
         const res = await this.$axios.get('/api/mqtt/report_template', {
           params: { scheme_id: this.schemeId },
         })
         if (res && res.code === 200 && res.data?.template) {
-          this.template = this.hydrateIds(res.data.template)
+          // 先hydrateIds，再转换fixed类型为system类型（如果是自定义系统变量）
+          let template = this.hydrateIds(res.data.template)
+          template = this.convertFixedToSysVar(template)
+          this.template = template
         }
-      } catch (e) {}
+      } catch (error) {
+        console.error('加载模板失败:', error)
+      }
+    },
+
+    // 将fixed类型转换为system类型（如果是自定义系统变量的值）
+    convertFixedToSysVar(node) {
+      const converted = { ...node }
+      
+      if (converted.children) {
+        converted.children = converted.children.map(child => this.convertFixedToSysVar(child))
+      }
+      
+      // 如果是fixed类型且值匹配自定义系统变量，转换为system类型
+      if (converted.type === 'leaf' && converted.source === 'fixed' && converted.value) {
+        const isCustom = this.sysVars.some(sv => sv.var_value === converted.value)
+        if (isCustom) {
+          return {
+            ...converted,
+            source: 'system'
+            // value保持不变，仍然是实际值
+          }
+        }
+      }
+      
+      return converted
     },
 
     async saveTemplate() {
       try {
+        // 在保存前，将自定义系统变量转换为fixed类型
+        const templateToSave = this.convertCustomSysVars(this.template)
+        
         await this.$axios.put('/api/mqtt/report_template', {
           scheme_id: Number(this.schemeId),
-          template: this.stripIds(this.template),
+          template: this.stripIds(templateToSave),
         })
         this.$message && this.$message.success('JSON结构已保存')
       } catch (e) {
         this.$message && this.$message.error('保存失败: ' + (e.message || '未知错误'))
       }
+    },
+
+    // 将自定义系统变量转换为fixed类型
+    convertCustomSysVars(node) {
+      const converted = { ...node }
+      
+      if (converted.children) {
+        converted.children = converted.children.map(child => this.convertCustomSysVars(child))
+      }
+      
+      // 如果是system类型且值是自定义系统变量的值，转换为fixed类型
+      if (converted.type === 'leaf' && converted.source === 'system' && converted.value) {
+        const isCustom = this.sysVars.some(sv => sv.var_value === converted.value)
+        if (isCustom) {
+          return {
+            ...converted,
+            source: 'fixed'
+            // value保持不变，已经是实际值
+          }
+        }
+      }
+      
+      return converted
     },
 
     // ========== 树操作 ==========
@@ -521,7 +600,17 @@ export default {
         if (v === 'false') return false
         return isNaN(v) ? v : Number(v)
       }
-      if (c.source === 'system') return c.value ? `\${${c.value}}` : null
+      if (c.source === 'system') {
+        if (!c.value) return null
+        // 检查是否为自定义系统变量(值是实际值,不是变量名)
+        const isCustom = this.sysVars.some(sv => sv.var_value === c.value)
+        if (isCustom) {
+          // 自定义系统变量: 直接显示值(虽然source是system,但实际是固定值)
+          return c.value
+        }
+        // 内置动态变量: 显示模板格式
+        return `\${${c.value}}`
+      }
       return null
     },
 
