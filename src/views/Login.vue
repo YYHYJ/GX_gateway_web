@@ -37,13 +37,22 @@
               :disabled="loading"
               autocomplete="current-password"
             />
-            <button type="button" class="toggle-pwd" @click="showPassword = !showPassword" tabindex="-1">
+            <button
+              type="button"
+              class="toggle-pwd"
+              @click="showPassword = !showPassword"
+              tabindex="-1"
+            >
               <i class="fas" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
             </button>
           </div>
         </div>
 
-        <button type="submit" class="btn-login" :disabled="loading || !form.username || !form.password">
+        <button
+          type="submit"
+          class="btn-login"
+          :disabled="loading || !form.username || !form.password"
+        >
           <i v-if="loading" class="fas fa-spinner fa-spin"></i>
           {{ loading ? '登录中...' : '登 录' }}
         </button>
@@ -90,10 +99,12 @@ export default {
           this.error = '网络连接失败，请检查后端服务是否运行'
         } else if (err.message.includes('timeout')) {
           this.error = '请求超时，请检查网络连接'
+        } else if (err.response?.status === 401) {
+          this.error = '用户名或密码错误'
         } else if (err.response) {
           this.error = `服务器错误: ${err.response.status}`
         } else {
-          this.error = '登录失败: ' + err.message
+          this.error = '用户名或密码错误'
         }
       } finally {
         this.loading = false

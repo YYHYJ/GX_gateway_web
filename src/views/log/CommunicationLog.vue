@@ -405,11 +405,11 @@ export default {
     parseLogComponents(log) {
       // 调试输出：查看原始日志
       console.log('=== 原始日志 ===', log)
-      
+
       // 提取时间（支持毫秒）
       const timeMatch = log.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?)/)
       console.log('时间匹配结果:', timeMatch)
-      
+
       if (!timeMatch) {
         // 如果没有匹配到时间，检查是否是纯级别行
         const trimmed = log.trim()
@@ -422,7 +422,7 @@ export default {
             message: '',
           }
         }
-        
+
         return {
           time: '',
           level: 'INFO',
@@ -434,7 +434,7 @@ export default {
 
       const time = timeMatch[1]
       const afterTime = log.substring(timeMatch[0].length).trim()
-      
+
       console.log('提取的时间:', time)
       console.log('时间后的内容:', afterTime)
 
@@ -476,13 +476,13 @@ export default {
 
       // 剩余部分全部作为消息
       const message = remaining.trim()
-      
+
       console.log('最终解析结果:', {
         time,
         level,
         module,
         source: '',
-        message
+        message,
       })
 
       return {

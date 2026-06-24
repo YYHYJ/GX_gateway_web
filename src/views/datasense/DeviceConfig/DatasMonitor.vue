@@ -22,14 +22,16 @@
                     class="device-select"
                   >
                     <option value="">请选择设备...</option>
-                    <option 
-                      v-for="device in devices" 
-                      :key="device.id" 
+                    <option
+                      v-for="device in devices"
+                      :key="device.id"
                       :value="device.id"
                       :class="{ 'device-connected': isDeviceConnectedFunc(device.id) }"
                     >
                       {{ device.device_name || '未知设备' }} ({{ device.device_code || device.id }})
-                      <span v-if="isDeviceConnectedFunc(device.id)" class="connected-indicator">✓ 已连接</span>
+                      <span v-if="isDeviceConnectedFunc(device.id)" class="connected-indicator"
+                        >✓ 已连接</span
+                      >
                       <span v-else class="disconnected-indicator">✗ 未连接</span>
                     </option>
                   </select>
@@ -63,7 +65,11 @@
                 <i class="fas fa-circle"></i>
                 {{ isWebSocketConnected ? 'WebSocket已连接' : 'WebSocket已断开' }}
               </div>
-              <div class="connection-status device-status" :class="{ connected: isDeviceConnected }" v-if="selectedDevice">
+              <div
+                class="connection-status device-status"
+                :class="{ connected: isDeviceConnected }"
+                v-if="selectedDevice"
+              >
                 <i class="fas fa-circle"></i>
                 {{ isDeviceConnected ? '设备已连接' : '设备未连接' }}
               </div>
@@ -182,7 +188,9 @@
                 <div class="data-title">
                   <i class="fas fa-table"></i>
                   <h3>实时监控</h3>
-                  <span class="data-count">{{ filteredRealtimeData.length }}/{{ realtimeData.length }} 个数据点</span>
+                  <span class="data-count"
+                    >{{ filteredRealtimeData.length }}/{{ realtimeData.length }} 个数据点</span
+                  >
                   <span class="writable-count" v-if="writablePointsCount > 0">
                     ({{ writablePointsCount }} 个可写)
                   </span>
@@ -417,10 +425,10 @@ export default {
         const response = await deviceService.getDeviceInstances()
         if (response.code === 200 && response.data?.devices) {
           this.devices = response.data.devices
-          
+
           // 2. 获取设备连接状态
           await this.fetchDeviceConnectionStatus()
-          
+
           // 3. 启动设备状态轮询
           this.startDeviceStatusPolling()
         } else {
@@ -443,12 +451,12 @@ export default {
         if (statusResponse.code === 200 && Array.isArray(statusResponse.data)) {
           // 清空状态映射
           this.deviceStatusMap.clear()
-          
+
           // 更新设备连接状态
-          statusResponse.data.forEach(status => {
+          statusResponse.data.forEach((status) => {
             this.deviceStatusMap.set(status.device_id, status.conn_status === 'connected')
           })
-          
+
           // 更新当前选择设备的连接状态
           if (this.selectedDevice) {
             this.isDeviceConnected = this.deviceStatusMap.get(this.selectedDevice.id) || false
@@ -462,7 +470,7 @@ export default {
     // 启动设备状态轮询
     startDeviceStatusPolling() {
       this.stopDeviceStatusPolling()
-      
+
       this.deviceStatusTimer = setInterval(() => {
         if (this.devices.length > 0) {
           this.fetchDeviceConnectionStatus()
@@ -695,7 +703,7 @@ export default {
         console.log('[组件] 数据匹配成功，更新界面')
         this.lastUpdateTime = Date.now()
         this.loadingData = false
-        
+
         // 收到设备数据，标记设备为已连接
         this.isDeviceConnected = true
         this.deviceStatusMap.set(this.selectedDevice.id, true)
@@ -749,8 +757,6 @@ export default {
       wsService.off(WSEvent.MESSAGE, this.handleAllMessages)
     },
 
-
-
     // 刷新设备列表
     refreshDeviceList() {
       this.loadDeviceList()
@@ -782,16 +788,16 @@ export default {
 
       try {
         // 获取设备协议类型
-        const device = this.devices.find(d => String(d.id) === String(this.selectedDevice.id))
+        const device = this.devices.find((d) => String(d.id) === String(this.selectedDevice.id))
         const protocolType = device?.protocol_type?.name || device?.protocol_type || ''
         const protocolLower = String(protocolType).toLowerCase()
-        
+
         // 根据协议类型选择不同的 API
         let apiUrl = '/api/change_flag'
         if (protocolLower === 'can' || protocolLower.includes('can')) {
           apiUrl = '/api/change_flag/can'
         }
-        
+
         console.log('[调试模式] 设备协议:', protocolType, '使用API:', apiUrl)
 
         const response = await axios.post(apiUrl, {
@@ -861,14 +867,14 @@ export default {
       try {
         // 根据设备协议类型确定日志文件名
         let logFilename = 'mddebug.log' // 默认 Modbus 日志
-        
+
         if (this.selectedDevice) {
           // 获取当前设备的协议类型
-          const device = this.devices.find(d => String(d.id) === String(this.selectedDevice.id))
+          const device = this.devices.find((d) => String(d.id) === String(this.selectedDevice.id))
           if (device && device.protocol_type) {
             const protocolType = device.protocol_type.name || device.protocol_type
             const protocolLower = String(protocolType).toLowerCase()
-            
+
             // 根据协议类型选择日志文件
             if (protocolLower === 'can' || protocolLower.includes('can')) {
               logFilename = 'can_debug.log'
@@ -876,7 +882,7 @@ export default {
               // Modbus 或其他协议使用默认日志
               logFilename = 'mddebug.log'
             }
-            
+
             console.log('[调试日志] 设备协议:', protocolType, '使用日志文件:', logFilename)
           }
         }
@@ -1786,7 +1792,10 @@ export default {
   min-width: 220px;
 }
 
-.data-search i { color: #95a5a6; font-size: 13px; }
+.data-search i {
+  color: #95a5a6;
+  font-size: 13px;
+}
 
 .data-search input {
   border: none;
@@ -1798,7 +1807,9 @@ export default {
   background: transparent;
 }
 
-.data-search input::placeholder { color: #bdc3c7; }
+.data-search input::placeholder {
+  color: #bdc3c7;
+}
 
 .search-clear {
   background: none;
@@ -1809,7 +1820,9 @@ export default {
   font-size: 12px;
 }
 
-.search-clear:hover { color: #e74c3c; }
+.search-clear:hover {
+  color: #e74c3c;
+}
 
 .data-update {
   font-size: 13px;

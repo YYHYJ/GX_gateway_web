@@ -54,10 +54,12 @@ service.interceptors.response.use(
         case 400:
           return Promise.reject(new Error('请求参数错误'))
         case 401:
-          // Token过期或无效
-          localStorage.removeItem('token')
-          localStorage.removeItem('userInfo')
-          window.location.href = '/'
+          // Token过期或无效（登录接口的401由调用方自行处理）
+          if (error.config?.url !== '/api/auth/login') {
+            localStorage.removeItem('token')
+            localStorage.removeItem('userInfo')
+            window.location.href = '/'
+          }
           return Promise.reject(new Error('登录已过期，请重新登录'))
         case 403:
           return Promise.reject(new Error('没有权限访问'))

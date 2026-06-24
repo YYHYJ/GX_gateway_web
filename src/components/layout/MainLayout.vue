@@ -49,25 +49,31 @@ export default {
     pageTitle() {
       const titleMap = {
         dashboard: '系统仪表盘',
+        'data-collection': '数据采集',
         data: '数据采集',
+        'data-forwarding': '数据转发',
         forward: '数据转发',
-        system: '系统管理',
         'system-management': '系统管理',
+        system: '系统管理',
+        'log-system': '日志系统',
         logs: '日志系统',
-        ota: 'OTA升级',
         'ota-upgrade': 'OTA 升级',
+        ota: 'OTA升级',
       }
       return titleMap[this.activeNav] || '--'
     },
     pageIcon() {
       const iconMap = {
         dashboard: 'fas fa-tachometer-alt',
+        'data-collection': 'fas fa-database',
         data: 'fas fa-database',
-        system: 'fas fa-cogs',
+        'data-forwarding': 'fas fa-exchange-alt',
         'system-management': 'fas fa-cogs',
+        system: 'fas fa-cogs',
+        'log-system': 'fas fa-clipboard-list',
         logs: 'fas fa-clipboard-list',
-        ota: 'fas fa-cloud-upload-alt',
         'ota-upgrade': 'fas fa-cloud-upload-alt',
+        ota: 'fas fa-cloud-upload-alt',
       }
       return iconMap[this.activeNav] || 'fas fa-cogs'
     },
